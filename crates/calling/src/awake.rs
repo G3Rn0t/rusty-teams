@@ -57,7 +57,10 @@ impl StayAwake {
 
     #[cfg(not(windows))]
     pub fn new() -> Self {
-        let inhibitor = std::process::Command::new("systemd-inhibit")
+        use std::os::unix::process::CommandExt;
+        // Die with the call process so a SIGSEGV does not leave a sleep infinity orphan.
+        let mut command = std::process::Command::new("systemd-inhibit");
+        command
             .args([
                 "--what=idle:sleep",
                 "--who=Rusty Teams",
@@ -68,9 +71,17 @@ impl StayAwake {
             ])
             .stdin(std::process::Stdio::null())
             .stdout(std::process::Stdio::null())
-            .stderr(std::process::Stdio::null())
-            .spawn()
-            .ok();
+            .stderr(std::process::Stdio::null());
+        // SAFETY: pre_exec runs in the child before exec; PR_SET_PDEATHSIG is process-local.
+        let inhibitor = unsafe {
+            command
+                .pre_exec(|| {
+                    libc::prctl(libc::PR_SET_PDEATHSIG, libc::SIGTERM);
+                    Ok(())
+                })
+                .spawn()
+                .ok()
+        };
         StayAwake { inhibitor }
     }
 
