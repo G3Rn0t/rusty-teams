@@ -1209,6 +1209,7 @@ dependencies = [
  "flate2",
  "futures-util",
  "image",
+ "libc",
  "libwebrtc",
  "ndarray",
  "nokhwa",
