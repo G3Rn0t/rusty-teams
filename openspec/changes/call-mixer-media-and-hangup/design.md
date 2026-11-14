@@ -26,6 +26,7 @@ On hangup, closing the WebRTC `PeerConnection` before stopping active video line
 3. **Ordered hangup teardown** — In `stop_local_publish` and `tear_down`, stop local camera/share capture, send `updateMediaDescriptions` (`recvonly`) for active publish lines, await `POST leave`, and send `DELETE` (`hangup_call_leg_body`) to every remembered `callLeg` URL before calling `peer.close()`.
 4. **Null-safe `set_track(None)` and off-task thread joins** — Guard null `MediaStreamTrack` pointers in `vendor/webrtc-sys/src/rtp_sender.cpp` (`SetTrack(nullptr)`). Move blocking capture and segmentation/effects thread joins onto background drop helpers so the async call loop never stalls. Set `PR_SET_PDEATHSIG(SIGTERM)` on the `systemd-inhibit` child in `crates/calling/src/awake.rs`.
 5. **720p `Auto` ceiling and `BitrateGovernor`** — Map `VideoQuality::Auto` capture ceiling to 720p in `crates/calling/src/video_quality.rs` while keeping stage receive requests at 1080p-class budgets for `Auto` and `1080p`. Add `BitrateGovernor` in `crates/calling/src/send_control.rs` to step down camera send bitrate after consecutive high-RTT/loss samples (floor 300 kbps) and recover gradually on a clean path.
+6. **Module split under `crates/calling/src/call/` (no behaviour change)** — Move `call.rs` via `git mv` to `call/mod.rs` (preserving rename tracking for `drive()` across upstream merges) and extract cohesive helper submodules: `peer_sdp.rs`, `escalation.rs`, `audio_switch.rs`, `bots.rs`, `teardown.rs`, and `stats.rs`.
 
 ## Risks / Trade-offs
 

@@ -15,7 +15,11 @@
 - [x] 3.1 Use a 720p capture ceiling for `VideoQuality::Auto` while preserving explicit `1080p` and stage receive budgets
 - [x] 3.2 Set `MaintainFramerate` degradation preference on camera senders and add `BitrateGovernor` under sustained RTT/loss
 
-## 4. Verify
+## 4. Module structure (pure refactor, behaviour unchanged)
 
-- [x] 4.1 `cargo test -p calling --lib`
-- [x] 4.2 `scripts/install-linux-local.sh --restart` and live two-party meeting test (solo join + lobby admit, camera both ways, screen share, clean hangup without frozen remote tile)
+- [x] 4.1 Move `crates/calling/src/call.rs` to `crates/calling/src/call/mod.rs` and extract `peer_sdp`, `escalation`, `audio_switch`, `bots`, `teardown`, and `stats` submodules
+
+## 5. Verify
+
+- [x] 5.1 `cargo test -p calling --lib`
+- [x] 5.2 `scripts/install-linux-local.sh --restart` and live two-party meeting test (solo join + lobby admit, camera both ways, screen share, clean hangup without frozen remote tile)
