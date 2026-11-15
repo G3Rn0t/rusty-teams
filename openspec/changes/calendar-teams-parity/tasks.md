@@ -10,18 +10,18 @@
 
 ## 2. Calendar preferences and mailbox working hours (calendar-view-settings)
 
-- [ ] 2.1 Add `calendar_prefs` to `crates/app-call-model`: default view, last span, first-day override, time scale, weekend rule, pane hidden, collapsed groups, cached work hours. Load and save as JSON under meta `calendar.prefs` with per-field defaults. Verify: `cargo test -p app-call-model calendar_prefs` (round trip, broken JSON, defaults).
-- [ ] 2.2 Derive the regional first day of week in `app_base::format` from the regional locale. Verify: `cargo test -p app-base` for en-US (Sunday), de-CH (Monday), ar-SA (Saturday).
-- [ ] 2.3 Add `crates/graph/src/mailbox.rs` with working hours read (`GET /me/mailboxSettings`) and write (`PATCH workingHours`, time zone sent back unchanged) using scope `MailboxSettings.ReadWrite`. Parse days, start, end and time zone. Verify: `cargo test -p graph mailbox` with captured response shapes.
-- [ ] 2.4 Load the working hours into `AppState` at engine ready and cache them in prefs. Add the `set_work_hours` action with revert and notice on failure. Verify: unit test of revert on a failed save.
-- [ ] 2.5 Parameterise `week_grid` by prefs:
+- [x] 2.1 Add `calendar_prefs` to `crates/app-call-model`: default view, last span, first-day override, time scale, weekend rule, pane hidden, collapsed groups, cached work hours. Load and save as JSON under meta `calendar.prefs` with per-field defaults. Verify: `cargo test -p app-call-model calendar_prefs` (round trip, broken JSON, defaults).
+- [x] 2.2 Derive the regional first day of week in `app_base::format` from the regional locale. Verify: `cargo test -p app-base` for en-US (Sunday), de-CH (Monday), ar-SA (Saturday).
+- [x] 2.3 Add `crates/graph/src/mailbox.rs` with working hours read (`GET /me/mailboxSettings`) and write (`PATCH workingHours`, time zone sent back unchanged) using scope `MailboxSettings.ReadWrite`. Parse days, start, end and time zone. Verify: `cargo test -p graph mailbox` with captured response shapes.
+- [x] 2.4 Load the working hours into `AppState` at engine ready and cache them in prefs. Add the `set_work_hours` action with revert and notice on failure. Verify: unit test of revert on a failed save.
+- [x] 2.5 Parameterise `week_grid` by prefs:
   - `visible_dates(span, anchor, prefs)`;
   - `week_start(date, first_day)`;
   - Work week from work days, weekend rule;
   - month grid start from the first day;
   - `week_days` over a date list.
   Update the callers (`week.rs`, demo week). Verify: `cargo test -p app-call-model week_grid` with new cases (Sunday start, Saturday start, non-consecutive work days, this/next week on Sunday, month header order).
-- [ ] 2.6 Persist the span: initial span from the default view, and `set_calendar_span` writes the last span. Day opened from a month cell does not write it. Verify: unit test in `crates/app-state` for restart semantics through the store.
+- [x] 2.6 Persist the span: initial span from the default view, and `set_calendar_span` writes the last span. Day opened from a month cell does not write it. Verify: unit test in `crates/app-state` for restart semantics through the store.
 - [ ] 2.7 Settings › Calendar: add a View section with selects for:
   - default view;
   - first day (Regional, Monday, Sunday, Saturday);
