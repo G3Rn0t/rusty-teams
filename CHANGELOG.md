@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.4.0-joe.4] - 2026-11-15
+
+### Added
+
+- Agent rule: every observable behaviour change starts as an OpenSpec change
+  before code, smoke, or Roadmap Done (`openspec-first`, `AGENTS.md`).
+- Research note for Teams meeting-reminder push («event 128»): unproven in
+  captures; Graph `reminderView` polling stays the reminder source of truth.
+
+### Changed
+
+- OpenSpec `calendar-accounts`: Upcoming-list RSVP requirements; reminder push
+  only when research proves the Teams event (poll remains the fallback).
+- Changelog for 0.4.0-joe.3 now documents the call mixer, hangup, and Auto 720p
+  work that shipped in that tag.
+
 ## [0.4.0-joe.3] - 2026-11-15
 
 ### Added
