@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.4.0-joe.6] - 2026-11-15
+
+### Added
+
+- macOS menu-bar tray (shared `tray-icon` path with Windows) and close to tray
+  via the Linux reopen path.
+- macOS Notification Center toasts (ADR 0017), same policy as Linux desktop
+  notifications.
+- Forgejo `macos-arm64` cargo test job; live checklist in `docs/macos-smoke.md`.
+- Optional Developer ID codesign / notarize in `scripts/build-macos.sh`; bare
+  `*-macos-universal` Mach-O release asset for in-app self-update from a `.app`.
+
+### Fixed
+
+- macOS screen share: ScreenCaptureKit picker no longer closes immediately
+  (upstream #47).
+- macOS sign-in without Google Chrome: Edge, Brave, Helium, Vivaldi; Chromium
+  major from fork `--version` lines (upstream #45).
+- Stay-awake on Linux fails the spawn when `PR_SET_PDEATHSIG` cannot be armed.
+
 ## [0.4.0-joe.5] - 2026-11-15
 
 ### Added
