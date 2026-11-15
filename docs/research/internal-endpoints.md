@@ -184,9 +184,14 @@ Teams on the web links (opened in a window, not requested by us): `crates/app-st
 
 `crates/chatsvc/src/calendar/reminders.rs` (`/me/reminderView`, snooze, dismiss), `crates/chatsvc/src/calendar/schedule.rs` (`/me/events`, RSVP, iCalUId lookup), `crates/chatsvc/src/recap.rs` and `crates/chatsvc/src/transcripts.rs` (`/chats/{id}/messages`, `/chats/{id}`, `/me/onlineMeetings`, attendance reports), `crates/calling/src/signaling.rs` (`/me`). These are Graph already.
 
+## Meeting reminder push (unproven)
+
+Roadmap mentions Teams «push event 128» for meeting start reminders. No host/path is listed here because the event is **not proven** in captures or in the fork realtime parser (`EventKind` has no calendar-reminder kind). Reminder SoT remains Graph `reminderView` (see Graph section above). Research note: `docs/research/meeting-reminder-push.md`.
+
 ## Open follow-ups
 
 - Graph calls above live in `chatsvc` and `calling`, not in the `graph` crate.
+- Prove or retire Roadmap «event 128» with a Teams web capture before adding a Trouter subscription.
 - `chatsvc` builds its service base URLs per module (`https://teams.cloud.microsoft/api/{chatsvc,mt,csa,nss}/{region}`); CSA base exists twice (`pins/mod.rs`, `translate.rs`). One `chatsvc` base-URL module would remove the repeats.
 - `recap.rs` and `transcripts.rs` duplicate the Graph chat scan and SharePoint item lookup.
 - Calling: `CHATSVC_REGION` is owned by `signaling.rs` and reused by MT modules; meeting options read and write use two hosts (`teams.microsoft.com` read with `emea//beta`, `teams.cloud.microsoft` write).

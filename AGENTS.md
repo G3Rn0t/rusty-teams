@@ -18,10 +18,12 @@ Product behaviour lives under `openspec/` (config: `openspec/config.yaml`). Skil
 
 **Language: English only** for all OpenSpec artifacts (proposal, design, tasks, specs, archives). Rule: `.cursor/rules/openspec-english.mdc` (`alwaysApply`). App UI may still offer German; that is product chrome, not OpenSpec authoring language.
 
+**OpenSpec first (no exceptions).** Rule: `.cursor/rules/openspec-first.mdc` (`alwaysApply`). Every plan for observable behaviour starts with an OpenSpec change under `openspec/changes/` before code, smoke, or Roadmap Done. A Cursor plan does not replace the change. Smoke-only or «already coded» does not skip it. Only pure refactoring, tooling, or docs with no behaviour change may use `skip_specs: true`.
+
 1. Observable behaviour changes → first a change under `openspec/changes/` (`/opsx-propose`).
 2. Implement with `/opsx-apply`; check off tasks including verify (`cargo test …`).
 3. After merge on the fork: `/opsx-archive` (deltas into `openspec/specs/`).
-4. Bugfix with no new behaviour, pure refactoring/tooling/docs → `skip_specs: true` or a Cursor plan without a spec delta.
+4. Bugfix with no new behaviour, pure refactoring/tooling/docs → `skip_specs: true`.
 
 CLI: `/usr/local/bin/openspec` (rule `openspec-cli-path`). Do not report «missing» without a PATH check.
 
