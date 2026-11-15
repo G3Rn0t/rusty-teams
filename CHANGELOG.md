@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.4.0-joe.7] - 2026-11-16
+
+### Added
+
+- Linux Flatpak release asset built on Forgejo (`packaging/flatpak/`): Freedesktop
+  SDK 25.08 build, Google Chrome as Flatpak extra-data via zypak, AppStream
+  metainfo, and sandbox defaults for calls, tray, toasts, and screen share.
+- Under `FLATPAK_ID`, the app skips XDG self-install and GitHub self-update;
+  notification and tray desktop-entry identity use the Flatpak app id.
+
+### Changed
+
+- Forgejo Release (Linux) runs Flatpak in a dedicated job that publishes the
+  `.flatpak` bundle; a missing bundle fails that job (no best-effort skip).
+
 ## [0.4.0-joe.6] - 2026-11-15
 
 ### Added
