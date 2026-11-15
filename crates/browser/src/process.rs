@@ -56,12 +56,18 @@ fn listener_pid(platform: Platform, port: u16) -> Result<u32, BrowserError> {
 
 pub(crate) fn is_chrome_image(image_name: &str) -> bool {
     // macOS `ps -o comm=` may return a full path; match on the basename.
+    // Chromium forks share the managed debug-port path on macOS (Edge, Brave, Helium, Vivaldi).
     let trimmed = image_name.trim().trim_matches('"');
     let base = trimmed.rsplit(['/', '\\']).next().unwrap_or(trimmed).trim();
     let lowered = base.to_ascii_lowercase();
     lowered.starts_with("chrome")
         || lowered.starts_with("google chrome")
         || lowered.starts_with("chromium")
+        || lowered.starts_with("microsoft edge")
+        || lowered.starts_with("msedge")
+        || lowered.starts_with("brave")
+        || lowered.starts_with("helium")
+        || lowered.starts_with("vivaldi")
 }
 
 fn process_image_name(platform: Platform, pid: &str) -> Result<String, BrowserError> {
@@ -118,6 +124,16 @@ mod tests {
             "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
         ));
         assert!(is_chrome_image("/usr/bin/chromium"));
+        assert!(is_chrome_image(
+            "/Applications/Helium.app/Contents/MacOS/Helium"
+        ));
+        assert!(is_chrome_image(
+            "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge"
+        ));
+        assert!(is_chrome_image(
+            "/Applications/Brave Browser.app/Contents/MacOS/Brave Browser"
+        ));
+        assert!(is_chrome_image("Vivaldi"));
         assert!(!is_chrome_image("\"wslrelay.exe\""));
         assert!(!is_chrome_image(
             "/Applications/Firefox.app/Contents/MacOS/firefox"

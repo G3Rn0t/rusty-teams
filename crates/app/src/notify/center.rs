@@ -27,16 +27,16 @@ use super::stack::{
     AgentToast, AgentToastKind, FADE_IN, FAST_FADE, ReplyState, SENT_DURATION, SLOW_FADE,
     ToastModel, ToastStack,
 };
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", target_os = "macos"))]
 use super::desktop_payload::{
     self, DesktopKey, DesktopPayload, MeetingLabels, MessageLabels, RingLabels, action,
 };
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", target_os = "macos"))]
 use super::platform::{
     BusNotification, DesktopNotifications, NotificationEvent, NotificationImage,
 };
 use super::taskbar::taskbar_badge_count;
-#[cfg(not(target_os = "linux"))]
+#[cfg(not(any(target_os = "linux", target_os = "macos")))]
 use super::text::describe;
 use super::toast::{PillView, ToastView};
 use super::urgent_repeat::UrgentRepeats;
@@ -120,12 +120,12 @@ pub struct NotificationCenter {
     tray: Option<Tray>,
     /// Last presence pushed to the tray; skip `sync_tray` when unchanged.
     last_tray_presence: Option<TrayPresence>,
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", target_os = "macos"))]
     desktop: Option<DesktopNotifications>,
     /// Logical keys to CloseNotification on the next desktop sync (dismiss / open / ring gone).
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", target_os = "macos"))]
     desktop_close: Vec<String>,
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", target_os = "macos"))]
     desktop_published: HashSet<String>,
     app_icon: AppIcon,
     shown_badge: Option<Badge>,
@@ -210,15 +210,15 @@ impl NotificationCenter {
             unread_mentions: HashSet::new(),
             tray,
             last_tray_presence,
-            #[cfg(target_os = "linux")]
+            #[cfg(any(target_os = "linux", target_os = "macos"))]
             desktop: if app.read(cx).mode.demo {
                 None
             } else {
                 DesktopNotifications::start()
             },
-            #[cfg(target_os = "linux")]
+            #[cfg(any(target_os = "linux", target_os = "macos"))]
             desktop_close: Vec::new(),
-            #[cfg(target_os = "linux")]
+            #[cfg(any(target_os = "linux", target_os = "macos"))]
             desktop_published: HashSet::new(),
             app_icon,
             shown_badge: None,
@@ -359,7 +359,7 @@ impl NotificationCenter {
     pub fn start_in_background(&self, window: &mut Window, cx: &mut App) {
         match (&self.tray, self.main_native) {
             (Some(_), Some(native)) => platform::hide_window(native),
-            #[cfg(target_os = "linux")]
+            #[cfg(any(target_os = "linux", target_os = "macos"))]
             (Some(_), None) => crate::main_window::hide(cx),
             _ => window.minimize_window(),
         }
@@ -374,7 +374,7 @@ impl NotificationCenter {
                 platform::hide_window(native);
                 true
             }
-            #[cfg(target_os = "linux")]
+            #[cfg(any(target_os = "linux", target_os = "macos"))]
             (true, Some(_), None) => {
                 crate::main_window::mark_hiding(cx);
                 false
@@ -813,13 +813,13 @@ impl NotificationCenter {
     }
 
     fn sync_windows(&mut self, cx: &mut Context<Self>) {
-        #[cfg(target_os = "linux")]
+        #[cfg(any(target_os = "linux", target_os = "macos"))]
         {
             self.poll_desktop(cx);
             self.sync_desktop(cx);
             return;
         }
-        #[cfg(not(target_os = "linux"))]
+        #[cfg(not(any(target_os = "linux", target_os = "macos")))]
         {
             let visible = self.visible_ids();
             let stale: Vec<u64> = self
@@ -1100,7 +1100,7 @@ impl NotificationCenter {
     }
 
     fn drop_toast(&mut self, id: u64, cx: &mut Context<Self>) {
-        #[cfg(target_os = "linux")]
+        #[cfg(any(target_os = "linux", target_os = "macos"))]
         self.queue_desktop_close(DesktopKey::Message(id));
         let fast = self.animated(FAST_FADE);
         self.stack.dismiss(id, Instant::now(), fast);
@@ -1173,7 +1173,7 @@ impl NotificationCenter {
             || !self.call_windows.is_empty()
             || self.app.read(cx).rings.is_ringing()
             || !self.app.read(cx).meeting_toasts.is_empty();
-        #[cfg(target_os = "linux")]
+        #[cfg(any(target_os = "linux", target_os = "macos"))]
         let needs_sync = needs_sync
             || !self.desktop_close.is_empty()
             || !self.desktop_published.is_empty();
@@ -1181,7 +1181,7 @@ impl NotificationCenter {
             self.sync_windows(cx);
             cx.notify();
         }
-        #[cfg(target_os = "linux")]
+        #[cfg(any(target_os = "linux", target_os = "macos"))]
         if self.desktop.is_some() {
             self.poll_desktop(cx);
         }
@@ -1222,12 +1222,12 @@ impl NotificationCenter {
         }
     }
 
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", target_os = "macos"))]
     fn queue_desktop_close(&mut self, key: DesktopKey) {
         self.desktop_close.push(key.replace_token());
     }
 
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", target_os = "macos"))]
     fn message_labels() -> MessageLabels {
         MessageLabels {
             mark_read: crate::i18n::tr("notify.mark_read"),
@@ -1235,7 +1235,7 @@ impl NotificationCenter {
         }
     }
 
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", target_os = "macos"))]
     fn ring_labels() -> RingLabels {
         RingLabels {
             decline: crate::i18n::tr("notify.decline"),
@@ -1245,7 +1245,7 @@ impl NotificationCenter {
         }
     }
 
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", target_os = "macos"))]
     fn meeting_labels() -> MeetingLabels {
         MeetingLabels {
             join: crate::i18n::tr("notify.join"),
@@ -1253,7 +1253,7 @@ impl NotificationCenter {
         }
     }
 
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", target_os = "macos"))]
     fn to_bus(payload: DesktopPayload, image: Option<NotificationImage>) -> BusNotification {
         BusNotification {
             logical_key: payload.key.replace_token(),
@@ -1272,7 +1272,7 @@ impl NotificationCenter {
         }
     }
 
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", target_os = "macos"))]
     fn avatar_notification_image(state: &AppState, user_id: Option<&str>) -> Option<NotificationImage> {
         use crate::data::AvatarState;
         use image::imageops::FilterType;
@@ -1292,7 +1292,7 @@ impl NotificationCenter {
         })
     }
 
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", target_os = "macos"))]
     fn sync_desktop(&mut self, cx: &mut Context<Self>) {
         let Some(desktop) = &self.desktop else {
             return;
@@ -1346,7 +1346,7 @@ impl NotificationCenter {
         self.desktop_published = visible_logical;
     }
 
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", target_os = "macos"))]
     fn poll_desktop(&mut self, cx: &mut Context<Self>) {
         let Some(desktop) = &self.desktop else {
             return;
@@ -1380,7 +1380,7 @@ impl NotificationCenter {
         }
     }
 
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", target_os = "macos"))]
     fn handle_desktop_action(&mut self, logical_key: &str, action_id: &str, cx: &mut Context<Self>) {
         let Some(key) = parse_logical_key(logical_key) else {
             return;
@@ -1477,7 +1477,7 @@ impl NotificationCenter {
             if let Some(native) = self.main_native {
                 platform::hide_window(native);
             } else {
-                #[cfg(target_os = "linux")]
+                #[cfg(any(target_os = "linux", target_os = "macos"))]
                 crate::main_window::hide(cx);
             }
         } else {
@@ -1492,7 +1492,7 @@ impl NotificationCenter {
     }
 
     fn raise_main_window(&mut self, cx: &mut Context<Self>) {
-        #[cfg(target_os = "linux")]
+        #[cfg(any(target_os = "linux", target_os = "macos"))]
         if crate::main_window::is_hidden(cx) {
             crate::main_window::show(cx);
             return;
@@ -1882,7 +1882,7 @@ fn wrapped_lines(text: &str, width: f32, cx: &App) -> usize {
         .sum()
 }
 
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", target_os = "macos"))]
 fn parse_logical_key(key: &str) -> Option<DesktopKey> {
     let (kind, id) = key.split_once(':')?;
     let id = id.parse().ok()?;

@@ -32,12 +32,13 @@ Feature parity with the Microsoft Teams desktop client.
 |---|---|---|
 | Sign in on Windows through embedded WebView2, single sign-on | Done |  |
 | Start from the local cache, no spinner | Done |  |
-| Self-update | Done |  |
-| Tray icon, close to tray | Done | Linux: StatusNotifierItem tray (KDE, GNOME with AppIndicator); close really closes the window and the tray opens a new one, since GPUI cannot hide a Wayland window |
+| Self-update | Partial | Windows and installed Linux: release assets. macOS: bare `*-macos-universal` Mach-O when running from a `.app`; `.app` zip stays the Finder install. Signing/notarization optional via `MACOS_CODESIGN_IDENTITY` |
+| Tray icon, close to tray | Done | Windows: `tray-icon`. Linux: StatusNotifierItem (KDE, GNOME with AppIndicator); close really closes the window and the tray opens a new one. macOS: same `tray-icon` menu bar path; close to tray uses the Linux reopen path |
 | Linux install, menu entry and self-update | Done | Offers to install itself to `~/.local/share/rusty-teams` with a `.desktop` entry (Settings > General to install, replace, remove or ask again); the installed release build offers new GitHub releases in a dialog (download with progress, then Restart now); the Teams icon is downloaded from Microsoft, not shipped |
 | Sign in on Linux without starting Chrome by hand | Done | The app starts Chrome or Chromium headless with its own profile, shows the window for the login and hides it again afterwards; a watchdog restarts a dead or hung Chrome |
 | Single instance, second start brings the window to front | Done |  |
-| Sign in on macOS without starting Chrome by hand | Done | Same managed Chrome as on Linux, profile in Application Support |
+| Sign in on macOS without starting Chrome by hand | Done | Same managed browser as on Linux, profile in Application Support. Takes the first of Chrome, Chromium, Edge, Brave, Helium, Vivaldi; checked live with Helium |
+| macOS Notification Center toasts | Done | Shared desktop-notification policy with Linux (ADR 0017); GPUI cards stay Windows-only |
 
 ## Chat list
 
@@ -134,6 +135,7 @@ Feature parity with the Microsoft Teams desktop client.
 | Muted chats stay quiet | Done | Toast, sound and taskbar badge only for @mentions |
 | Mute notifications during calls and meetings | Done | Settings > Notifications switch, default off; message toasts and sounds stay away while a call is active, call rings still show |
 | Notifications on Linux | Done | Message and ring sounds; desktop toasts via `org.freedesktop.Notifications` (same actions as the Windows card; shell history and desktop Do not disturb when the daemon supports them) |
+| Notifications on macOS | Done | Notification Center via `notify-rust` (ADR 0017); same policy as Linux; actions best-effort |
 
 ## Search and navigation
 
@@ -174,7 +176,7 @@ Feature parity with the Microsoft Teams desktop client.
 | Incoming call: ring, accept, decline | Partial | Ring toast, ring tone, missed call in Activity, registrar endpoint, attach + accept. Built from the Teams code, not yet rung by a second person |
 | 1:1 and group calls | Partial | Phone button, Calling and Ringing tiles, end notices, direct to mixer renegotiation. Not yet tried with a second person |
 | Join a meeting from a chat | Done | Join button from the live meeting state, joins muted, roster tiles, lobby, Leave and End meeting. Audio only. Live at engine level with up to 9 anonymous guests: roster, lobby, audio both ways, End meeting. The chat Join button itself not driven live |
-| Screen share on Wayland and macOS | Done | System picker: desktop ScreenCast portal on Wayland, ScreenCaptureKit on macOS |
+| Screen share on Wayland and macOS | Done | System picker: desktop ScreenCast portal on Wayland, ScreenCaptureKit on macOS (picker kept alive until select/cancel; see `docs/macos-smoke.md`) |
 | Video and screen sharing | Done | Send and receive over libwebrtc H264, source requests through `applyChannelParameters`, stage, strip, self view, share banner. Live with guests: camera and screen received (screen 1280x720), own camera and screen decoded by a guest |
 | Meeting extras | Done | Share menu switch "Include computer sound" (remembered, mixed into the one audio track with the mic, own playback excluded on Windows 10 build 20348+), raise hand with queue badge, lower hand and Lower all hands for organizers, reactions on the sender's tile for 3 s, meeting chat in a 320 px side panel with unread badge. Live with guests: hands raised and lowered (one and all), reactions both ways, meeting chat both ways. "Include computer sound" not checked live |
 | Organizer controls | Done | Amber lobby banner with View (Admit, Deny per person) and Admit all, tile menu (right-click or "..." on hover): Pin for me, Spotlight for everyone, Mute, Lower hand, Remove from meeting with a confirm dialog, "..." controls menu with Mute all. Live with guests: admit, deny, Admit all (admits each waiting person; the service's admitAll leaves anonymous guests waiting), spotlight on and off, mute, Mute all (`specified` scope; `all` mutes nobody), lower hand, remove |
