@@ -1,9 +1,15 @@
-# Flatpak-Manifest: installiert ein vorgebautes Binary (CI Stage).
-# App-ID: net.devops_geek.RustyTeams
+# Flatpak manifest for Rusty Teams.
+# Runtime 25.08 + llvm21 (webrtc-sys needs Clang ≥ 21) + rust-stable.
+# Chrome is Flatpak extra-data (downloaded at install from Google) and launched via zypak.
+# --device=all: camera uses V4L2 (/dev/video*); Flatpak has no narrower camera permission.
+# --talk-name=org.freedesktop.Flatpak: required by zypak for Chromium's nested sandbox only.
 app-id: net.devops_geek.RustyTeams
 runtime: org.freedesktop.Platform
-runtime-version: '24.08'
+runtime-version: '25.08'
 sdk: org.freedesktop.Sdk
+sdk-extensions:
+  - org.freedesktop.Sdk.Extension.rust-stable
+  - org.freedesktop.Sdk.Extension.llvm21
 command: rusty-teams
 finish-args:
   - --share=network
@@ -11,25 +17,102 @@ finish-args:
   - --socket=fallback-x11
   - --socket=wayland
   - --socket=pulseaudio
+  - --socket=pipewire
   - --device=dri
+  - --device=all
   - --filesystem=xdg-download
-  - --talk-name=org.freedesktop.portal.Desktop
-  - --talk-name=org.freedesktop.portal.ScreenCast
+  - --talk-name=org.freedesktop.Notifications
+  - --talk-name=org.kde.StatusNotifierWatcher
+  - --own-name=org.kde.StatusNotifierItem-*
+  - --talk-name=org.freedesktop.Flatpak
 modules:
-  - name: rusty-teams
+  - name: zypak
+    sources:
+      - type: git
+        url: https://github.com/refi64/zypak
+        tag: v2025.09
+        commit: 693a71c5ffa80ec9c9ce2ae03b1ccc493c698e53
+
+  - name: chrome
     buildsystem: simple
     build-commands:
-      - install -Dm755 rusty-teams /app/bin/rusty-teams
-      - ln -sf rusty-teams /app/bin/teams
-      - install -Dm644 rusty-teams.desktop /app/share/applications/net.devops_geek.RustyTeams.desktop
-      - install -Dm644 rusty-teams.png /app/share/icons/hicolor/256x256/apps/net.devops_geek.RustyTeams.png
-      - install -Dm644 net.devops_geek.RustyTeams.metainfo.xml /app/share/metainfo/net.devops_geek.RustyTeams.metainfo.xml
+      - install -Dm755 apply_extra.sh /app/bin/apply_extra
+      - install -Dm755 stub_sandbox.sh /app/bin/stub_sandbox
+      - install -Dm755 google-chrome.sh /app/bin/google-chrome
+      - ln -sf google-chrome /app/bin/google-chrome-stable
+      - ln -sf google-chrome /app/bin/chromium
+      - ln -sf google-chrome /app/bin/chromium-browser
+      - ln -sf google-chrome /app/bin/chrome
     sources:
+      - type: extra-data
+        # Pin from https://dl.google.com/linux/chrome/deb/dists/stable/main/binary-amd64/Packages
+        url: https://dl.google.com/linux/chrome/deb/pool/main/g/google-chrome-stable/google-chrome-stable_157.0.8103.78-1_amd64.deb
+        sha256: 4d740636b5c96f687798602c5aad6a5a270f44dd02e48db0638ae77aa4867b1b
+        size: 147497676
+        filename: chrome.deb
+        only-arches: [x86_64]
+        x-checker-data:
+          type: debian-repo
+          root: https://dl.google.com/linux/chrome/deb
+          dist: stable
+          component: main
+          package-name: google-chrome-stable
+          is-main-source: true
       - type: file
-        path: stage/rusty-teams
+        path: apply_extra.sh
       - type: file
-        path: stage/rusty-teams.desktop
+        path: stub_sandbox.sh
       - type: file
-        path: stage/rusty-teams.png
+        path: google-chrome.sh
+
+  - name: rusty-teams
+    buildsystem: simple
+    build-options:
+      append-path: /usr/lib/sdk/rust-stable/bin:/usr/lib/sdk/llvm21/bin
+      append-ld-library-path: /usr/lib/sdk/llvm21/lib
+      env:
+        CARGO_HOME: /run/build/rusty-teams/cargo
+        CC: clang
+        CXX: clang++
+        CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER: clang
+        # Override .cargo/config.toml mold; llvm21 ships lld.
+        RUSTFLAGS: -C link-arg=-fuse-ld=lld
+        # Extracted webrtc-linux-x64-release.zip (see sources).
+        LK_CUSTOM_WEBRTC: /run/build/rusty-teams/webrtc/linux-x64-release
+    build-commands:
+      # Drop mold from repo config so RUSTFLAGS lld wins cleanly.
+      - sed -i '/fuse-ld=mold/d' .cargo/config.toml
+      - mkdir -p webrtc
+      - bsdtar -xf webrtc-linux-x64-release.zip -C webrtc
+      - |
+        test -n "${FLATPAK_APP_VERSION:-}" && test -n "${FLATPAK_APP_DATE:-}"
+        sed -i "s/version=\"0.0.0\" date=\"1970-01-01\"/version=\"${FLATPAK_APP_VERSION}\" date=\"${FLATPAK_APP_DATE}\"/" \
+          packaging/flatpak/net.devops_geek.RustyTeams.metainfo.xml
+      - cargo build -p app --release --frozen --offline
+      - install -Dm755 target/release/teams /app/bin/rusty-teams
+      - ln -sf rusty-teams /app/bin/teams
+      - install -Dm644 packaging/flatpak/net.devops_geek.RustyTeams.desktop /app/share/applications/net.devops_geek.RustyTeams.desktop
+      - install -Dm644 packaging/flatpak/net.devops_geek.RustyTeams.metainfo.xml /app/share/metainfo/net.devops_geek.RustyTeams.metainfo.xml
+      - install -Dm644 crates/app/assets/icon/teams-fast-256.png /app/share/icons/hicolor/256x256/apps/net.devops_geek.RustyTeams.png
+      # Optional: ss for managed Chrome debug-port cleanup (Platform usually ships it).
+      - |
+        if ! command -v ss >/dev/null 2>&1; then
+          echo "WARNING: ss not in build env; runtime Platform is expected to provide it" >&2
+        fi
+    sources:
+      - generated-sources.json
       - type: file
-        path: stage/net.devops_geek.RustyTeams.metainfo.xml
+        url: https://github.com/livekit/rust-sdks/releases/download/webrtc-a545de4/webrtc-linux-x64-release.zip
+        sha256: 2ece73b9a72a2cacd73d0c62ac3a414e202f37885c3c8f49dddb43c1443ac0bd
+        dest-filename: webrtc-linux-x64-release.zip
+      - type: dir
+        path: ../..
+        skip:
+          - .flatpak-builder
+          - packaging/flatpak/.flatpak-build
+          - packaging/flatpak/.flatpak-repo
+          - packaging/flatpak/.flatpak-cache
+          - packaging/flatpak/stage
+          - packaging/flatpak/generated-sources.json
+          - target
+          - dist

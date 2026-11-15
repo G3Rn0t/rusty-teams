@@ -266,6 +266,9 @@ mod platform {
 pub fn self_update_allowed() -> bool {
     #[cfg(target_os = "linux")]
     {
+        if crate::linux_desktop::running_in_flatpak() {
+            return false;
+        }
         return std::env::current_exe().is_ok_and(|executable| {
             crate::linux_desktop::Layout::current()
                 .is_some_and(|layout| crate::linux_desktop::is_installed(&executable, &layout))
@@ -462,5 +465,19 @@ mod tests {
     #[test]
     fn running_version_is_set() {
         assert!(!running_version().is_empty());
+    }
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn flatpak_disallows_self_update() {
+        const FLATPAK_ID_ENV: &str = "FLATPAK_ID";
+        let previous = std::env::var_os(FLATPAK_ID_ENV);
+        // SAFETY: test process only; restored before the function returns.
+        unsafe { std::env::set_var(FLATPAK_ID_ENV, "net.devops_geek.RustyTeams") };
+        assert!(!self_update_allowed());
+        match previous {
+            Some(value) => unsafe { std::env::set_var(FLATPAK_ID_ENV, value) },
+            None => unsafe { std::env::remove_var(FLATPAK_ID_ENV) },
+        }
     }
 }

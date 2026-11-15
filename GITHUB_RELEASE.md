@@ -23,7 +23,7 @@ Workflow: [`.forgejo/workflows/release.yaml`](.forgejo/workflows/release.yaml).
 | Debian / Ubuntu | `ubuntu-latest` | `rusty-teams-<ver>-amd64.deb` |
 | Fedora / RHEL | `ubuntu-latest` | `rusty-teams-<ver>-x86_64.rpm` |
 | Arch | `ubuntu-latest` | `rusty-teams-<ver>-x86_64.pkg.tar.zst` |
-| Flatpak | `ubuntu-latest` | `rusty-teams-<ver>-x86_64.flatpak` (best effort; job continues without it) |
+| Flatpak | `ubuntu-latest` (Forgejo job `flatpak`) | `rusty-teams-<ver>-x86_64.flatpak` — SDK build on the runner via `packaging/flatpak/build_flatpak.sh`; job fails the release if the bundle is missing |
 | Windows amd64 | `ci-runner-windows-01` | `rusty-teams-<ver>-windows-amd64.exe` |
 | Windows ARM64 | `windows-arm64` | `rusty-teams-<ver>-windows-arm64.exe` |
 | macOS universal | `macos-arm64` | `rusty-teams-<ver>-macos-universal.zip` |
@@ -57,7 +57,7 @@ Verifiziert auf Forgejo-Release und GitHub-Spiegel:
 | `*-amd64.deb` | ok (dpkg control geprüft) |
 | `*-x86_64.rpm` | ok |
 | `*-x86_64.pkg.tar.zst` | ok (Layout `rusty-teams` + Symlink `teams`) |
-| `*-x86_64.flatpak` | best effort — diesmal nicht veröffentlicht |
+| `*-x86_64.flatpak` | required Linux asset (SDK build + Chrome extra-data); install with `flatpak install --user rusty-teams-<ver>-x86_64.flatpak` |
 | `*-windows-amd64.exe` | ok (Forgejo `ci-runner-windows-01` + Mirror) |
 | `*-windows-arm64.exe` | ok (Homelab `win-02` war offline; einmalig `windows-11-arm` Smoke, Asset nach Forgejo gespiegelt). Dauerhaft: Label `windows-arm64`. `.cargo/config.toml` hat `+crt-static` für `aarch64-pc-windows-msvc`. |
 | `*-macos-universal.zip` | ok |

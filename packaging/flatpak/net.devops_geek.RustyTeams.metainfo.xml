@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>net.devops_geek.RustyTeams</id>
+  <name>Rusty Teams</name>
+  <summary>Native Microsoft Teams chat client</summary>
+  <metadata_license>MIT</metadata_license>
+  <project_license>MIT</project_license>
+  <developer id="net.devops_geek">
+    <name>devops-geek</name>
+  </developer>
+  <description>
+    <p>
+      A fast, native Microsoft Teams client for chat, calls, calendar, and
+      screen sharing. Sign-in uses a managed Google Chrome instance bundled
+      with the Flatpak. Screen sharing uses the desktop ScreenCast portal on
+      Wayland.
+    </p>
+  </description>
+  <launchable type="desktop-id">net.devops_geek.RustyTeams.desktop</launchable>
+  <url type="homepage">https://github.com/d0dg3r/rusty-teams</url>
+  <url type="bugtracker">https://github.com/danieldaeschle/rusty-teams/issues</url>
+  <content_rating type="oars-1.1">
+    <content_attribute id="social-chat">intense</content_attribute>
+    <content_attribute id="social-audio">intense</content_attribute>
+    <content_attribute id="social-contacts">intense</content_attribute>
+  </content_rating>
+  <recommends>
+    <control>keyboard</control>
+    <control>pointing</control>
+  </recommends>
+  <requires>
+    <display_length compare="ge">768</display_length>
+  </requires>
+  <!-- RELEASES: rewritten by build_flatpak.sh -->
+  <releases>
+    <release version="0.0.0" date="1970-01-01"/>
+  </releases>
+</component>

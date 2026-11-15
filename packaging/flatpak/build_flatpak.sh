@@ -1,66 +1,104 @@
 #!/usr/bin/env bash
-# Erzeugt dist/rusty-teams-<ver>-x86_64.flatpak aus dem Release-Binary.
+# Build dist/rusty-teams-<ver>-x86_64.flatpak from the SDK manifest (no host binary wrap).
+# Intended entry point for Forgejo Release (Linux) job `flatpak` on ubuntu-latest:
+# installs Flathub Platform/SDK on the runner, builds inside the SDK, bundles the .flatpak.
 set -euo pipefail
-
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 # shellcheck source=../common.sh
 source "$ROOT/packaging/common.sh"
 
 cd "$ROOT"
 
-for cmd in flatpak flatpak-builder; do
+for cmd in flatpak flatpak-builder python3 curl; do
   if ! command -v "$cmd" >/dev/null 2>&1; then
-    echo "Missing $cmd (apt install flatpak flatpak-builder)" >&2
+    echo "Missing $cmd" >&2
     exit 1
   fi
 done
 
-BIN="$(packaging_binary "$ROOT")"
-ICON="$(packaging_icon "$ROOT")"
-DESKTOP="$(packaging_desktop "$ROOT")"
 VERSION="$(packaging_version "$ROOT")"
 APP_ID=net.devops_geek.RustyTeams
-MANIFEST="$ROOT/packaging/flatpak/${APP_ID}.yml"
+FLATPAK_DIR="$ROOT/packaging/flatpak"
+MANIFEST="$FLATPAK_DIR/${APP_ID}.yml"
+GENERATOR="${FLATPAK_CARGO_GENERATOR:-$FLATPAK_DIR/flatpak-cargo-generator.py}"
+GENERATED="$FLATPAK_DIR/generated-sources.json"
+WORKDIR="$FLATPAK_DIR/.flatpak-build"
+REPO="$FLATPAK_DIR/.flatpak-repo"
+CACHE="$FLATPAK_DIR/.flatpak-cache"
+DATE="$(date -u +%Y-%m-%d)"
+EXCEPTIONS="$FLATPAK_DIR/flatpak-builder-lint-exceptions.json"
 
-STAGE="$ROOT/packaging/flatpak/stage"
-WORKDIR="$ROOT/packaging/flatpak/.flatpak-build"
-REPO="$ROOT/packaging/flatpak/.flatpak-repo"
-mkdir -p "$STAGE" "$ROOT/dist"
+mkdir -p "$ROOT/dist" "$CACHE"
 
-install -m 755 "$BIN" "$STAGE/rusty-teams"
-# Desktop/Icon auf Flatpak-App-ID umbiegen
-sed \
-  -e "s/^Exec=.*/Exec=rusty-teams/" \
-  -e "s/^Icon=.*/Icon=${APP_ID}/" \
-  "$DESKTOP" >"$STAGE/rusty-teams.desktop"
-install -m 644 "$ICON" "$STAGE/rusty-teams.png"
+if [[ ! -f "$GENERATOR" ]]; then
+  echo "Downloading flatpak-cargo-generator.py"
+  curl -fsSL \
+    'https://raw.githubusercontent.com/flatpak/flatpak-builder-tools/master/cargo/flatpak-cargo-generator.py' \
+    -o "$GENERATOR"
+fi
+chmod +x "$GENERATOR"
 
-cat >"$STAGE/${APP_ID}.metainfo.xml" <<EOF
-<?xml version="1.0" encoding="UTF-8"?>
-<component type="desktop-application">
-  <id>${APP_ID}</id>
-  <name>Rusty Teams</name>
-  <summary>Native Microsoft Teams chat client</summary>
-  <metadata_license>MIT</metadata_license>
-  <project_license>MIT</project_license>
-  <description>
-    <p>A fast, native Teams client. Screen sharing uses the desktop ScreenCast portal on Wayland.</p>
-  </description>
-  <launchable type="desktop-id">${APP_ID}.desktop</launchable>
-  <releases>
-    <release version="${VERSION}" />
-  </releases>
-</component>
-EOF
+echo "Generating cargo sources from Cargo.lock → $GENERATED"
+if command -v uv >/dev/null 2>&1; then
+  uv run --with 'aiohttp>=3.9.5,<4' --with 'tomlkit>=0.13.3,<1' --with 'PyYAML>=6.0.2,<7' \
+    "$GENERATOR" "$ROOT/Cargo.lock" -o "$GENERATED"
+else
+  python3 "$GENERATOR" "$ROOT/Cargo.lock" -o "$GENERATED"
+fi
+[[ -s "$GENERATED" ]] || {
+  echo "generated-sources.json is empty" >&2
+  exit 1
+}
 
-# Flathub-Runtime einmalig (CI-Cache bleibt im Workdir)
-flatpak remote-add --if-not-exists --user flathub https://flathub.org/repo/flathub.flatpakrepo || true
-flatpak install -y --user flathub org.freedesktop.Platform//24.08 org.freedesktop.Sdk//24.08 || true
+desktop-file-validate "$FLATPAK_DIR/${APP_ID}.desktop"
+
+echo "Ensuring Freedesktop 25.08 SDK + rust-stable + llvm21"
+flatpak remote-add --if-not-exists --user flathub https://flathub.org/repo/flathub.flatpakrepo
+flatpak install -y --user flathub \
+  org.freedesktop.Platform//25.08 \
+  org.freedesktop.Sdk//25.08 \
+  org.freedesktop.Sdk.Extension.rust-stable//25.08 \
+  org.freedesktop.Sdk.Extension.llvm21//25.08
 
 rm -rf "$WORKDIR" "$REPO"
 mkdir -p "$REPO"
 
-flatpak-builder --user --force-clean --repo="$REPO" "$WORKDIR" "$MANIFEST"
+BUILDER_ARGS=(
+  --user
+  --force-clean
+  --repo="$REPO"
+  --state-dir="$CACHE"
+  --default-branch=stable
+  --env=FLATPAK_APP_VERSION="$VERSION"
+  --env=FLATPAK_APP_DATE="$DATE"
+)
+
+# Bake Google OAuth client into the binary when CI provides it (never commit secrets).
+if [[ -n "${TEAMS_GOOGLE_CLIENT_ID:-}" ]]; then
+  BUILDER_ARGS+=(--env=TEAMS_GOOGLE_CLIENT_ID="$TEAMS_GOOGLE_CLIENT_ID")
+fi
+if [[ -n "${TEAMS_GOOGLE_CLIENT_SECRET:-}" ]]; then
+  BUILDER_ARGS+=(--env=TEAMS_GOOGLE_CLIENT_SECRET="$TEAMS_GOOGLE_CLIENT_SECRET")
+fi
+
+echo "flatpak-builder (SDK build)…"
+(
+  cd "$FLATPAK_DIR"
+  flatpak-builder "${BUILDER_ARGS[@]}" "$WORKDIR" "$(basename "$MANIFEST")"
+)
+
+if command -v flatpak-builder-lint >/dev/null 2>&1; then
+  if [[ -f "$EXCEPTIONS" ]]; then
+    flatpak-builder-lint --exceptions "$EXCEPTIONS" manifest "$MANIFEST"
+  else
+    flatpak-builder-lint manifest "$MANIFEST"
+  fi
+fi
+
 out="$ROOT/dist/rusty-teams-${VERSION}-x86_64.flatpak"
-flatpak build-bundle "$REPO" "$out" "$APP_ID"
+flatpak build-bundle "$REPO" "$out" "$APP_ID" --runtime-repo=https://flathub.org/repo/flathub.flatpakrepo
+[[ -s "$out" ]] || {
+  echo "bundle missing or empty: $out" >&2
+  exit 1
+}
 echo "Wrote $out"

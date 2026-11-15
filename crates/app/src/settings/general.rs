@@ -111,6 +111,11 @@ fn install_rows(cx: &App) -> Vec<AnyElement> {
         use crate::i18n::tr_args;
         use crate::linux_install::{self, Installation};
 
+        // Flatpak owns install and updates; hide the XDG/GitHub controls.
+        if linux_install::packaged_by_flatpak() {
+            return Vec::new();
+        }
+
         let with = |key: &str, name: &str, value: String| {
             let mut args = HashMap::new();
             args.insert(name.to_owned(), value);

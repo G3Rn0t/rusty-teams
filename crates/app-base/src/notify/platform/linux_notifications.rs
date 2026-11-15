@@ -12,7 +12,7 @@ use zbus::Connection;
 use zbus::zvariant::{OwnedValue, Value};
 
 use crate::APP_NAME;
-use crate::linux_desktop::DESKTOP_ID;
+use crate::linux_desktop;
 
 const SERVICE: &str = "org.freedesktop.Notifications";
 const PATH: &str = "/org/freedesktop/Notifications";
@@ -380,7 +380,10 @@ async fn notify(
     let mut hints: HashMap<&str, Value<'_>> = HashMap::new();
     hints.insert("urgency", Value::U8(note.urgency));
     hints.insert("category", Value::Str(note.category.as_str().into()));
-    hints.insert("desktop-entry", Value::Str(DESKTOP_ID.into()));
+    hints.insert(
+        "desktop-entry",
+        Value::Str(linux_desktop::desktop_entry_id().into()),
+    );
     hints.insert("suppress-sound", Value::Bool(true));
 
     if let Some(image) = &note.image {

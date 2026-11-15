@@ -10,7 +10,7 @@ use ksni::menu::{CheckmarkItem, StandardItem, SubMenu};
 use ksni::{Category, Icon, MenuItem, ToolTip};
 
 use super::{TrayCommand, TrayPresence};
-use crate::linux_desktop::DESKTOP_ID;
+use crate::linux_desktop;
 use crate::notify::tray_status;
 
 const TRAY_ICON_SIZES: [u32; 3] = [22, 32, 64];
@@ -118,7 +118,7 @@ fn status_submenu(item: &Item) -> MenuItem<Item> {
 
 impl ksni::Tray for Item {
     fn id(&self) -> String {
-        DESKTOP_ID.to_owned()
+        linux_desktop::desktop_entry_id()
     }
 
     fn title(&self) -> String {

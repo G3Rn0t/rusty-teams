@@ -17,6 +17,9 @@ use crate::theme;
 const DIALOG_WIDTH: f32 = 460.;
 
 pub fn start(cx: &mut App) {
+    if linux_desktop::running_in_flatpak() {
+        return;
+    }
     let (Ok(executable), Some(layout)) = (std::env::current_exe(), Layout::current()) else {
         return;
     };
@@ -125,7 +128,15 @@ pub enum Installation {
     NotInstalled,
 }
 
+/// True when Settings should hide XDG install/replace/remove and GitHub update controls.
+pub fn packaged_by_flatpak() -> bool {
+    linux_desktop::running_in_flatpak()
+}
+
 pub fn installation() -> Installation {
+    if packaged_by_flatpak() {
+        return Installation::NotInstalled;
+    }
     let (Ok(executable), Some(layout)) = (std::env::current_exe(), Layout::current()) else {
         return Installation::NotInstalled;
     };
@@ -146,6 +157,9 @@ pub fn install_folder() -> String {
 
 /// Settings > General: installs (or replaces the installed copy with) this binary.
 pub fn install_now(cx: &mut App) {
+    if packaged_by_flatpak() {
+        return;
+    }
     let (Ok(executable), Some(layout)) = (std::env::current_exe(), Layout::current()) else {
         return;
     };
@@ -157,6 +171,9 @@ pub fn install_now(cx: &mut App) {
 
 /// Settings > General: removes the menu entry and the installed binary.
 pub fn remove(cx: &mut App) {
+    if packaged_by_flatpak() {
+        return;
+    }
     let Some(layout) = Layout::current() else {
         return;
     };

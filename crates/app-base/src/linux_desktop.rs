@@ -13,6 +13,33 @@ pub const BINARY_FILE_NAME: &str = "teams";
 pub const ICON_SIZES: [u32; 5] = [256, 128, 64, 48, 32];
 const INSTALL_FOLDER: &str = "rusty-teams";
 const DONT_ASK_META_KEY: &str = "linux.install.dont_ask";
+const FLATPAK_ID_ENV: &str = "FLATPAK_ID";
+
+/// True when Flatpak has set `FLATPAK_ID` (packaged install owns updates).
+pub fn running_in_flatpak() -> bool {
+    flatpak_id().is_some()
+}
+
+/// Flatpak app id when running inside Flatpak; otherwise `None`.
+pub fn flatpak_id() -> Option<String> {
+    flatpak_id_from(std::env::var(FLATPAK_ID_ENV).ok().as_deref())
+}
+
+/// Desktop-entry id for notifications and tray: Flatpak app id, else [`DESKTOP_ID`].
+pub fn desktop_entry_id() -> String {
+    desktop_entry_id_from(std::env::var(FLATPAK_ID_ENV).ok().as_deref())
+}
+
+pub(crate) fn flatpak_id_from(value: Option<&str>) -> Option<String> {
+    value
+        .map(str::trim)
+        .filter(|id| !id.is_empty())
+        .map(str::to_owned)
+}
+
+pub(crate) fn desktop_entry_id_from(flatpak: Option<&str>) -> String {
+    flatpak_id_from(flatpak).unwrap_or_else(|| DESKTOP_ID.to_owned())
+}
 
 /// Cargo marks its target folder with `CACHEDIR.TAG`; a binary in
 /// `target/<profile>/` is build output and is copied, not moved, on install.
@@ -82,7 +109,7 @@ pub fn is_installed(executable: &Path, layout: &Layout) -> bool {
 }
 
 pub fn should_offer_install(executable: &Path, layout: &Layout, dont_ask: bool) -> bool {
-    !dont_ask && !is_installed(executable, layout)
+    !running_in_flatpak() && !dont_ask && !is_installed(executable, layout)
 }
 
 pub fn dont_ask_again(store: &store::Store) -> bool {
@@ -281,6 +308,39 @@ mod tests {
             layout.icon_file(48),
             Path::new("/home/a/.local/share/icons/hicolor/48x48/apps/rusty-teams.png")
         );
+    }
+
+    #[test]
+    fn flatpak_id_ignores_empty_and_desktop_entry_falls_back() {
+        assert_eq!(flatpak_id_from(None), None);
+        assert_eq!(flatpak_id_from(Some("")), None);
+        assert_eq!(flatpak_id_from(Some("   ")), None);
+        assert_eq!(
+            flatpak_id_from(Some("net.devops_geek.RustyTeams")),
+            Some("net.devops_geek.RustyTeams".into())
+        );
+        assert_eq!(desktop_entry_id_from(None), DESKTOP_ID);
+        assert_eq!(desktop_entry_id_from(Some("")), DESKTOP_ID);
+        assert_eq!(
+            desktop_entry_id_from(Some("net.devops_geek.RustyTeams")),
+            "net.devops_geek.RustyTeams"
+        );
+    }
+
+    #[test]
+    fn flatpak_env_blocks_the_install_offer() {
+        let previous = std::env::var_os(FLATPAK_ID_ENV);
+        // SAFETY: test process only; restored before the function returns.
+        unsafe { std::env::set_var(FLATPAK_ID_ENV, "net.devops_geek.RustyTeams") };
+        let layout = Layout::new("/tmp/share");
+        let binary = Path::new("/tmp/downloads/teams");
+        assert!(running_in_flatpak());
+        assert!(!should_offer_install(binary, &layout, false));
+        assert_eq!(desktop_entry_id(), "net.devops_geek.RustyTeams");
+        match previous {
+            Some(value) => unsafe { std::env::set_var(FLATPAK_ID_ENV, value) },
+            None => unsafe { std::env::remove_var(FLATPAK_ID_ENV) },
+        }
     }
 
     #[test]

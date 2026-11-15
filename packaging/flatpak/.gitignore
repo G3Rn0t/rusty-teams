@@ -1,0 +1,8 @@
+stage/
+.flatpak-build/
+.flatpak-repo/
+.flatpak-cache/
+generated-sources.json
+cargo-sources.json
+flatpak-cargo-generator.py
+*.partial
