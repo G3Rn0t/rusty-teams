@@ -76,6 +76,24 @@ impl AppState {
         cx.notify();
     }
 
+    /// Group check box: turn every calendar of one Google account on or off.
+    pub fn set_google_account_selected(
+        &mut self,
+        account_id: &str,
+        on: bool,
+        cx: &mut Context<Self>,
+    ) {
+        let mut accounts = load_calendar_accounts(&self.store);
+        if let Some(account) = accounts.google_account_mut(account_id) {
+            for calendar in &mut account.calendars {
+                calendar.selected = on;
+            }
+        }
+        let _ = save_calendar_accounts(&self.store, &accounts);
+        self.refresh_calendar(cx);
+        cx.notify();
+    }
+
     pub fn toggle_outlook_calendar_selected(&mut self, cx: &mut Context<Self>) {
         let mut accounts = load_calendar_accounts(&self.store);
         accounts.outlook_selected = !accounts.outlook_selected;
@@ -167,11 +185,7 @@ impl AppState {
                         state.google_connect_pending = None;
                         let mut args = std::collections::HashMap::new();
                         args.insert("email".to_owned(), email);
-                        state.raise_notice(
-                            tr_args("settings.calendar.connected", &args),
-                            None,
-                            cx,
-                        );
+                        state.raise_notice(tr_args("settings.calendar.connected", &args), None, cx);
                         state.refresh_calendar(cx);
                         cx.notify();
                     })
