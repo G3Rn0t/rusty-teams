@@ -24,6 +24,16 @@
   now loads through the sign-in session, refreshes on the calendar poll, shows
   loading and a Retry notice per failed source.
 - A calendar toggle made during a running fetch is no longer undone.
+- Calls: mixer leg switch handles `call/mediaAcknowledgement`, refreshes
+  control links, and marks the new peer ready on ICE (no 20 s wait / stale
+  406/404 on the ended leg).
+- Calls: detaching video senders across a peer switch is null-safe (no SIGSEGV
+  in the C++ shim); pending camera/share start is not requeued mid-switch.
+- Screen share: folded `x-multi-stream` lines stay `recvonly` in mixer answers
+  (no `SdpParsingFailure`); local share upgrades the receive-only line to a
+  conference send offer.
+- Hangup: turn off camera/share publishing, send `leave` and `DELETE callLeg`
+  while peers are still open, then close peers so remote tiles drop immediately.
 - Area-sweep fixes across chat, calendar, calls and MCP; PR_SET_PDEATHSIG is
   gated to Linux.
 - Local install script also stops `/usr/local/bin/rusty-teams` and clears a
@@ -31,6 +41,11 @@
 
 ### Changed
 
+- Camera quality `Auto` uses a 720p capture ceiling (explicit `1080p` remains);
+  camera send prefers `MaintainFramerate` and governs bitrate under sustained
+  RTT/loss.
+- Calling code split from monolithic `call.rs` into focused modules under
+  `call/`.
 - Diagnostics the app always wrote stay on; only detailed crate logging is
   opt-in (ADR 0013).
 - Calendar, weekday and month names follow the app language (en/de).
