@@ -18,12 +18,14 @@ Product behaviour lives under `openspec/` (config: `openspec/config.yaml`). Skil
 
 **Language: English only** for all OpenSpec artifacts (proposal, design, tasks, specs, archives). Rule: `.cursor/rules/openspec-english.mdc` (`alwaysApply`). App UI may still offer German; that is product chrome, not OpenSpec authoring language.
 
-**OpenSpec first (no exceptions).** Rule: `.cursor/rules/openspec-first.mdc` (`alwaysApply`). Every plan for observable behaviour starts with an OpenSpec change under `openspec/changes/` before code, smoke, or Roadmap Done. A Cursor plan does not replace the change. Smoke-only or «already coded» does not skip it. Only pure refactoring, tooling, or docs with no behaviour change may use `skip_specs: true`.
+**OpenSpec first (no exceptions).** Rule: `.cursor/rules/openspec-first.mdc` (`alwaysApply`). **Hard stop:** before the first edit under product `crates/`, create `openspec/changes/<name>/` and run `openspec validate <name>`. A Cursor plan does not replace the change. Smoke-only or «already coded» does not skip it.
 
-1. Observable behaviour changes → first a change under `openspec/changes/` (`/opsx-propose`).
+**CI gate (forever):** `scripts/check-openspec-gate.sh` runs on Forgejo Test. Product `crates/` changes without a touch under `openspec/changes/` or `openspec/specs/` **fail the build**. Agents cannot «forget» past CI.
+
+1. Observable behaviour → first `openspec/changes/<name>/` (`/opsx-propose`) + `openspec validate <name>`.
 2. Implement with `/opsx-apply`; check off tasks including verify (`cargo test …`).
 3. After merge on the fork: `/opsx-archive` (deltas into `openspec/specs/`).
-4. Bugfix with no new behaviour, pure refactoring/tooling/docs → `skip_specs: true`.
+4. Pure refactoring/tooling/docs with no behaviour → still create the change with `skip_specs: true` so the CI gate sees `openspec/changes/`.
 
 CLI: `/usr/local/bin/openspec` (rule `openspec-cli-path`). Do not report «missing» without a PATH check.
 
