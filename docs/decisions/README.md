@@ -28,5 +28,6 @@ Statuses: `proposed`, `accepted`, `superseded`.
 | [0010](0010-preferred-external-browser.md) | Preferred browser for links and Google OAuth |
 | [0011](0011-calendar-event-peek.md) | Calendar events open as a Teams-like peek |
 | [0012](0012-local-diagnostic-data-and-upstream-issues.md) | Local diagnostic data layout and upstream issues |
+| [0016](0016-calendar-week-start-and-time-scale-stay-local.md) | Calendar work hours go to the mailbox, week start and time scale stay local |
 
 Records `0001` to `0010` are the decisions already shipped. `0011` stays `proposed` until the calendar-peek PR merges. `0012` stays `proposed` until the support-bundle path change merges. `0001` follows Daniel's call-window note in `GUARDRAILS.md`.

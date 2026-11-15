@@ -22,7 +22,7 @@
   - `week_days` over a date list.
   Update the callers (`week.rs`, demo week). Verify: `cargo test -p app-call-model week_grid` with new cases (Sunday start, Saturday start, non-consecutive work days, this/next week on Sunday, month header order).
 - [x] 2.6 Persist the span: initial span from the default view, and `set_calendar_span` writes the last span. Day opened from a month cell does not write it. Verify: unit test in `crates/app-state` for restart semantics through the store.
-- [ ] 2.7 Settings › Calendar: add a View section with selects for:
+- [x] 2.7 Settings › Calendar: add a View section with selects for:
   - default view;
   - first day (Regional, Monday, Sunday, Saturday);
   - work days (chips);
@@ -30,7 +30,7 @@
   - time scale;
   - weekend rule.
   Add localized search terms in `settings/nav.rs` and include Calendar in the search-term test. Verify: `cargo test -p app settings` and a layout_guard select-alignment test for one new select.
-- [ ] 2.8 Write decision note `docs/decisions/0016-calendar-week-start-and-time-scale-stay-local.md` and list it in `docs/decisions/README.md`. Verify: file present and linked.
+- [x] 2.8 Write decision note `docs/decisions/0016-calendar-week-start-and-time-scale-stay-local.md` and list it in `docs/decisions/README.md`. Verify: file present and linked.
 
 ## 3. Scroll to work start (calendar-now-view)
 
