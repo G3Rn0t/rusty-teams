@@ -1,13 +1,13 @@
-#[cfg(not(target_os = "linux"))]
+#[cfg(not(any(target_os = "linux", target_os = "macos")))]
 use std::sync::Arc;
-#[cfg(not(target_os = "linux"))]
+#[cfg(not(any(target_os = "linux", target_os = "macos")))]
 use std::sync::atomic::AtomicBool;
 
 use gpui_kit::Window;
 
 use calling::ShareKind;
 
-#[cfg(not(target_os = "linux"))]
+#[cfg(not(any(target_os = "linux", target_os = "macos")))]
 use super::TrayCommand;
 use super::{NativeHandle, ScreenRect, ShareGeometry, WorkArea};
 use crate::notify::badge::Badge;
@@ -77,11 +77,11 @@ pub fn share_geometry(_kind: ShareKind, _id: u64) -> Option<ShareGeometry> {
 }
 
 pub fn system_quiet() -> bool {
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", target_os = "macos"))]
     {
         super::notifications_inhibited()
     }
-    #[cfg(not(target_os = "linux"))]
+    #[cfg(not(any(target_os = "linux", target_os = "macos")))]
     {
         false
     }
@@ -112,10 +112,10 @@ pub fn play_mp3(_bytes: Vec<u8>) {}
 #[cfg(not(any(target_os = "linux", target_os = "macos")))]
 pub fn play_mp3_until(_bytes: Vec<u8>, _looped: bool, _stop: Arc<AtomicBool>) {}
 
-#[cfg(not(target_os = "linux"))]
+#[cfg(not(any(target_os = "linux", target_os = "macos")))]
 pub struct Tray;
 
-#[cfg(not(target_os = "linux"))]
+#[cfg(not(any(target_os = "linux", target_os = "macos")))]
 impl Tray {
     pub fn new(_presence: super::TrayPresence, _icon_png: &[u8]) -> Option<Self> {
         None

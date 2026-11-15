@@ -54,3 +54,22 @@ jobs:
           set -euo pipefail
           cargo test \
             --config "patch.crates-io.gpui-pre-windows.path=\"$GPUI_PRE_WINDOWS_PATCHED\""
+
+  macos:
+    name: macOS
+    runs-on: macos-arm64
+    timeout-minutes: 90
+    env:
+      LANG: en_US.UTF-8
+      LC_ALL: en_US.UTF-8
+      NODE_OPTIONS: --dns-result-order=ipv4first
+      CARGO_TERM_COLOR: always
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.forgejo/actions/setup-rust
+
+      - name: Tests
+        run: cargo test
+        # Live ScreenCaptureKit / managed-browser smokes stay on docs/macos-smoke.md;
+        # unit tests cover picker frames, browser discovery, and shared call paths.
