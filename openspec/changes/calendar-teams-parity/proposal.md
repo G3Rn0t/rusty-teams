@@ -20,15 +20,15 @@ This change brings behaviour to Teams parity and the look as close as the island
   - which days Work week shows;
   - where the grid scrolls when today is not visible;
   - which hours are shaded as outside work time.
-- **First day of week.** The default comes from the regional format. A local override offers Monday, Sunday or Saturday. It applies to Week, Work week, Month and the mini month.
+- **First day of week.** The default comes from the mailbox language's region, as in Outlook, and from the regional format when that is unknown. A local override offers Monday, Sunday or Saturday. It applies to Week, Work week, Month and the mini month.
 - **Time scale.** A choice of 15, 30 or 60 minutes. Teams uses 30 by default, which becomes our default too. It sets the row height and the minor grid lines.
 - **Weekend Work week.** A choice between showing this week or next week when today is not a work day. Next week stays the default.
 - **Scroll target.** When today is not in the visible range, the hour grid opens at work start, not at midnight.
 - **Grid look.** The grid moves toward the Teams look:
   - Day headers show the day number and the full localized weekday name.
-  - The hour grid draws a full line per hour and a dashed line per time-scale step.
+  - The hour grid draws a line per hour and a lighter line per time-scale step. Lines stay solid, as the islands look requires.
   - Time outside work hours is shaded.
-  - A dashed now line runs across all visible days and becomes solid with a dot in the today column.
+  - A thin, light now line runs across all visible days and becomes a thicker accent line with a dot in the today column.
   - Event blocks show title and organizer on one line, with a series icon and the colour of their calendar.
 - **Header.** A pane toggle shows or hides the left pane. The "Calendar" title moves into the left pane. The view dropdown keeps its place.
 - **Left pane like Teams.** It shows:

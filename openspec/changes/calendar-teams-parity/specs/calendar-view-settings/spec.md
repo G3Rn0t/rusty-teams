@@ -56,7 +56,12 @@ Work week SHALL show only the configured work days of the week, in week order, e
 
 ### Requirement: First day of week
 
-The first day of week SHALL default to the one of the regional format. Settings › Calendar MUST offer an override with Monday, Sunday or Saturday. Week, Work week, Month and the mini month MUST start their weeks on that day.
+The first day of week SHALL default to the one of the mailbox language's region, as Outlook does, and to the regional format when the mailbox language is unknown. Settings › Calendar MUST offer an override with Monday, Sunday or Saturday. Week, Work week, Month and the mini month MUST start their weeks on that day.
+
+#### Scenario: Default follows the mailbox language
+
+- **WHEN** the mailbox language is en-CH, the regional format is en-US and no override is set
+- **THEN** weeks start on Monday
 
 #### Scenario: Sunday start
 

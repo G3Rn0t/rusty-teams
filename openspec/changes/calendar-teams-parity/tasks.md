@@ -38,16 +38,16 @@
 
 ## 4. Grid look and strings (calendar-grid-layout)
 
-- [ ] 4.1 Add `theme::calendar_color(index)` (accent, then avatar palette) and the colour row in `docs/design/islands/SPEC.md`. Map events to calendar indexes by source and calendar id. Verify: `cargo test -p app-base theme` wrap-around test and a mapping unit test.
-- [ ] 4.2 Add localized weekday names in `app_base::format` (full, short, letter; de and en). Use them in day headers, the month header and the mini month. Verify: `cargo test -p app-base format`.
-- [ ] 4.3 Day headers: number plus full weekday name, today in the accent colour with the bar. Verify: demo-mode visual check against the Teams screenshot.
-- [ ] 4.4 Hour grid geometry from the time scale:
-  - full hour lines and dashed minor lines;
+- [x] 4.1 Add `theme::calendar_color(index)` (accent, then avatar palette) and the colour row in `docs/design/islands/SPEC.md`. Map events to calendar indexes by source and calendar id. Verify: `cargo test -p app-base theme` wrap-around test and a mapping unit test.
+- [x] 4.2 Add localized weekday names in `app_base::format` (full, short, letter; de and en). Use them in day headers, the month header and the mini month. Verify: `cargo test -p app-base format`.
+- [x] 4.3 Day headers: number plus full weekday name, today in the accent colour with the bar. Verify: demo-mode visual check against the Teams screenshot.
+- [x] 4.4 Hour grid geometry from the time scale:
+  - hour lines and lighter minor lines (solid, islands look);
   - hour labels at the top of the line, 12h/24h from the regional clock;
   - work-hour and non-work-day shading.
   Verify: unit tests for row height and label text, plus a demo check of 15/30/60.
-- [ ] 4.5 Now line: dashed across all visible days, solid with a dot in today's column. Verify: demo check in Week.
-- [ ] 4.6 Event blocks: bold title with the organizer on the same line, more title lines for tall blocks, series icon, block and chip colours from the calendar colour. Join and the source label stay. Apply the colours to all-day and month chips. Verify: demo check, plus the existing week-grid tests stay green.
+- [x] 4.5 Now line: thin and light across all visible days, thicker accent line with a dot in today's column. Verify: demo check in Week.
+- [x] 4.6 Event blocks: bold title with the organizer on the same line, more title lines for tall blocks, series icon, block and chip colours from the calendar colour. Join and the source label stay. Apply the colours to all-day and month chips. Verify: demo check, plus the existing week-grid tests stay green.
 - [ ] 4.7 Header: pane toggle (state in prefs), "Calendar" title moved to the pane, view menu with a localized span label. Verify: layout_guard header checks at 640/1280/1920 px.
 - [ ] 4.8 Localize all strings in `calendar_view.rs`, `calendar_month.rs`, `calendar_date_picker.rs` and `week_grid` labels through `tr()`, with new `calendar.view.*` keys (en + de) in `app.yml`. Verify: `cargo test -p app i18n` (every key has en and de) and a German demo check.
 

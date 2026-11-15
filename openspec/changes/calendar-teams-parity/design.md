@@ -39,8 +39,9 @@ See proposal.md › Why. The current state that shapes the approach:
    - The guardrail "Settings Teams knows are saved where Teams saves them" requires this.
    - Code lives in `crates/graph/src/mailbox.rs` (Graph, no internal endpoint).
 
-3. **First day of week: regional default plus local override.**
-   - The default derives from the regional locale already used for date formats (`app_base::format`):
+3. **First day of week: mailbox language default plus local override.**
+   - Outlook derives the default week start from the mailbox language (`language.locale` in `/me/mailboxSettings`, read together with the working hours). Teams shows Monday-first weeks for a mailbox in `en-CH` even with an `en-US` browser (checked 2026-11-15). The region of that locale decides; the regional format is the fallback.
+   - The rule for a locale (`app_base::format::first_day_for_locale`) is:
      - Sunday for `en-us`, `en-ca`, `en-ph`, `en-au`, `en-nz`, `en-in`, `ja`, `ko`, `zh-tw`, `he`, `pt-br`;
      - Saturday for `ar` locales other than Morocco and Tunisia, and for `fa`;
      - Monday otherwise.
@@ -78,7 +79,7 @@ See proposal.md › Why. The current state that shapes the approach:
     - `docs/design/islands/SPEC.md` › Colour gets a row "calendar colours: accent, then avatar palette".
 
 11. **Grid geometry.** Row height per hour comes from the time scale (15 → 120 px, 30 → 96 px, 60 → 64 px, kept as named constants in the view).
-    - Minor lines are dashed: short segments drawn with the existing `border` role at reduced opacity.
+    - Minor lines are solid with the `border` role at reduced opacity. Teams dashes them, but the islands look keeps every line solid, and the layout guard enforces that.
     - Shading uses `background` over `surface` for off-hours, painted as absolute blocks below the lines.
 
 12. **Localized weekday names.** `format::weekday_name(weekday, WeekdayWidth::{Full, Short, Letter})` returns names from tables for de and en, keyed by the UI language (`ui_locale`). This follows Teams, which shows the UI language for names. chrono `%a`/`%A` is always English and is removed from calendar views.

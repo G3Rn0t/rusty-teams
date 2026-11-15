@@ -20,7 +20,7 @@ Each day column header in Day, Work week and Week SHALL show the day number and 
 
 ### Requirement: Hour grid lines
 
-The hour grid SHALL draw a full line at each hour and a dashed minor line at each time-scale step inside the hour. Hour labels MUST sit at the top of their hour line and follow the regional 12-hour or 24-hour clock.
+The hour grid SHALL draw a line at each hour and a lighter minor line at each time-scale step inside the hour. Lines stay solid, as the islands look requires. Hour labels MUST sit at the top of their hour line and follow the regional 12-hour or 24-hour clock.
 
 #### Scenario: Twenty-four hour clock
 
@@ -48,13 +48,13 @@ Time outside the work hours, and whole non-work days shown in Week or Day, SHALL
 
 ### Requirement: Now line across the week
 
-While today is in the visible range of Work week or Week, a dashed now line SHALL run across all visible day columns at the current time. In today's column the line MUST be solid with a dot at its left edge.
+While today is in the visible range of Work week or Week, a thin, light now line SHALL run across all visible day columns at the current time. In today's column the line MUST be in the accent colour, thicker, with a dot at its left edge.
 
 #### Scenario: Now line on other days
 
 - **WHEN** Week shows today and two other days
-- **THEN** the other day columns show a dashed line at the current time
-- **AND** today's column shows a solid line with a dot
+- **THEN** the other day columns show a thin, light line at the current time
+- **AND** today's column shows a thicker accent line with a dot
 
 ### Requirement: Event block content
 
