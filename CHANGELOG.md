@@ -1,5 +1,40 @@
 # Changelog
 
+## [0.4.0-joe.3] - 2026-11-15
+
+### Added
+
+- Calendar like Teams: default view setting (Last used by default, survives a
+  restart), first day of week from the mailbox language, work days and hours
+  read from and saved to the Outlook mailbox, time scale 15/30/60 min, and
+  this or next week on a day off.
+- Calendar grid: day number over the weekday name, work-hour shading, now line
+  across the week, title and organizer on one line, series icon, calendar
+  colours; a range without today opens at work start.
+- Calendar list pane: mini month, Add calendar, collapsible groups with a group
+  check box, Show all.
+- Linux: desktop toasts via freedesktop Notifications (message, ring, meeting
+  reminder) with the same actions as the Windows card.
+- Linux: tray icon with the Teams presence menu, close to tray, self-install
+  and updates.
+
+### Fixed
+
+- Calendar weeks stayed empty when the calling engine was not ready; the grid
+  now loads through the sign-in session, refreshes on the calendar poll, shows
+  loading and a Retry notice per failed source.
+- A calendar toggle made during a running fetch is no longer undone.
+- Area-sweep fixes across chat, calendar, calls and MCP; PR_SET_PDEATHSIG is
+  gated to Linux.
+- Local install script also stops `/usr/local/bin/rusty-teams` and clears a
+  stale single-instance socket.
+
+### Changed
+
+- Diagnostics the app always wrote stay on; only detailed crate logging is
+  opt-in (ADR 0013).
+- Calendar, weekday and month names follow the app language (en/de).
+
 ## [0.4.0-joe.2] - 2026-11-14
 
 ### Added
