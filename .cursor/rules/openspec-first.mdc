@@ -1,22 +1,42 @@
 ---
-description: Every observable behaviour change starts as an OpenSpec change — before plan code or smoke
+description: HARD STOP — no crates/ behaviour code until an OpenSpec change exists and validates
 alwaysApply: true
 ---
 
-# OpenSpec first (no exceptions)
+# OpenSpec first — hard stop (no exceptions)
 
-Every change with **observable product behaviour** starts as an OpenSpec change under `openspec/changes/`, before implementation, smoke, or Roadmap status flips.
+Every change with **observable product behaviour** starts as an OpenSpec change under `openspec/changes/`, **before** any implementation, smoke, Roadmap Done, or release tag.
 
-## Required
+CI enforces this: `scripts/check-openspec-gate.sh` fails the Forgejo Test workflow when `crates/` behaviour sources change without a touch under `openspec/changes/` or `openspec/specs/`.
 
-1. **Plan step 1** is the OpenSpec change (`/opsx-propose` / skill `openspec-propose`): proposal, design, tasks, and spec deltas. English only (rule `openspec-english`).
-2. A Cursor plan does **not** replace the OpenSpec change. The plan becomes the proposal; artifacts must exist under `openspec/changes/<name>/`.
-3. Implement with `/opsx-apply`, check off `tasks.md` (including verify), then `/opsx-archive` after merge on the fork.
-4. Smoke tests, live checks, and «maybe no code» do **not** skip this. If behaviour is in scope, propose first.
-5. Only pure refactoring, tooling, or docs with **no** behaviour change may use `skip_specs: true`.
+## STOP before code
+
+Before the **first** `Write` / `StrReplace` / commit that touches product behaviour under:
+
+`crates/app`, `crates/app-base`, `crates/app-state`, `crates/app-call-model`, `crates/calling`, `crates/browser`, `crates/session`, `crates/chatsvc`, `crates/graph`, `crates/core`, `crates/webview`
+
+you MUST already have:
+
+1. `openspec/changes/<name>/` with `proposal.md`, `design.md`, `tasks.md`, and spec deltas (English only — rule `openspec-english`)
+2. A green `openspec validate <name>` (CLI: `/usr/local/bin/openspec`, rule `openspec-cli-path`)
+
+If you already edited crates without that: **stop implementing**. Create and validate the OpenSpec change, then continue. Do not «finish the code and add OpenSpec later».
+
+## Required flow
+
+1. Plan step 1 = OpenSpec change (`/opsx-propose`). A Cursor plan does **not** replace it.
+2. Implement with `/opsx-apply`; check off `tasks.md` including verify.
+3. After merge on the fork: `/opsx-archive` (deltas into `openspec/specs/`).
+4. Only pure refactoring, tooling, or docs with **no** behaviour change may use `skip_specs: true` — and must still create the change folder so the CI gate sees `openspec/changes/`.
 
 ## Do not
 
-- Write code or mark Roadmap Done for a behaviour change without an active (or just-proposed) OpenSpec change
-- Treat OpenSpec as an afterthought at the end of a plan
-- Skip OpenSpec because the feature already has code and «only needs a live check»
+- Write behaviour code first and archive OpenSpec after the release
+- Skip OpenSpec because upstream already has a PR, or because «it is only a fix»
+- Skip OpenSpec because the feature already has code and «only needs smoke»
+- Mark Roadmap Done or cut a release tag for behaviour without archived (or active) OpenSpec coverage
+- Claim OpenSpec was done when only ROADMAP/CHANGELOG/ADR changed
+
+## Agent self-check (every turn that edits product code)
+
+Ask: «Does `openspec/changes/<name>/` exist for this work and did `openspec validate` pass?» If no → create it before the next code edit.

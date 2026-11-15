@@ -4,6 +4,10 @@
 
 ### Added
 
+- OpenSpec archive `macos-prod-foundation` (sign-in forks, ScreenCaptureKit
+  picker keep-alive, tray, Notification Center). CI OpenSpec gate:
+  `scripts/check-openspec-gate.sh` fails Test when product crates change
+  without an `openspec/` touch.
 - macOS menu-bar tray (shared `tray-icon` path with Windows) and close to tray
   via the Linux reopen path.
 - macOS Notification Center toasts (ADR 0017), same policy as Linux desktop

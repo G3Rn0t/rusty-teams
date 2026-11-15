@@ -12,8 +12,27 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  openspec-gate:
+    name: OpenSpec gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: OpenSpec required for behaviour crates
+        run: |
+          set -euo pipefail
+          base="${{ github.event.before }}"
+          if [[ -z "${base:-}" || "$base" == "0000000000000000000000000000000000000000" ]]; then
+            base="$(git merge-base HEAD origin/main 2>/dev/null || git rev-parse HEAD~1)"
+          fi
+          scripts/check-openspec-gate.sh "$base"
+
   linux:
     name: Linux
+    needs: [openspec-gate]
     runs-on: ubuntu-latest
     timeout-minutes: 90
     env:
@@ -34,6 +53,7 @@ jobs:
 
   windows:
     name: Windows
+    needs: [openspec-gate]
     runs-on: ci-runner-windows-01
     timeout-minutes: 90
     env:
@@ -57,6 +77,7 @@ jobs:
 
   macos:
     name: macOS
+    needs: [openspec-gate]
     runs-on: macos-arm64
     timeout-minutes: 90
     env:
