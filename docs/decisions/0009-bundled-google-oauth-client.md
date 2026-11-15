@@ -13,13 +13,14 @@ Options were: env vars only, a settings field for the client id, or one project 
 
 ## Decision
 
-Official release builds compile in the project Desktop client id (and optional secret) via `option_env!`. Runtime env vars still override for developers. Users only click Connect Google; tokens stay on the device (see ADR 0002). `v*` tags refuse to build without the Forgejo Actions secret for the client id.
+Official release builds compile in the project Desktop client id and client secret via `option_env!`. Runtime environment variables still override for developers. Users only click Connect Google; tokens stay on the device (see ADR 0002). `v*` tags refuse to build without the Forgejo Actions secrets for the client id (and secret).
 
-Local Linux installs use `scripts/install-linux-local.sh`, which rebuilds with `.env.google.local` when present, so a bare `cargo build` copy does not silently drop Google calendars.
+Local Linux installs use `scripts/install-linux-local.sh`, which rebuilds with `.env.google.local` when present and **requires** both `TEAMS_GOOGLE_CLIENT_ID` and `TEAMS_GOOGLE_CLIENT_SECRET`. Google Cloud Desktop clients issue a secret; without it, token refresh fails and the week grid stays empty after the first access token expires. A true public client with an empty secret remains allowed at runtime in code, but the local install gate does not ship that path.
 
 ## Consequences
 
 - Connect works from a Dock-started macOS `.app` and from Windows/Linux installers without a terminal.
 - The project owns the Google Cloud consent screen and verification path for the sensitive `calendar` scope.
-- Local `cargo run` without the secret stays Outlook-only unless the developer exports the env vars.
+- Local `cargo run` without id/secret stays Outlook-only unless the developer exports the env vars.
 - The client id is visible in the binary; the secret must never appear in UI, logs, or the store.
+- Refresh failures surface as a Google calendar load failure (banner + retry), not a silent empty week.
