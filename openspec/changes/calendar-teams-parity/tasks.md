@@ -2,11 +2,11 @@
 
 ## 1. Reliable grid load (calendar-accounts)
 
-- [ ] 1.1 Load the grid's Outlook range through the core session (`Calendar::new(engine.remote().session())`) instead of `CallLauncher::calendar_view`. Set a pending flag when no engine exists yet and run the load on `BackendEvent::Engine`. Verify: unit test in `crates/app-state` that a load requested before the engine runs once the engine arrives.
-- [ ] 1.2 Reload the visible range on each agenda poll result while the calendar section is shown. Verify: unit test that `BackendEvent::Calendar` triggers a grid reload only with the calendar open.
-- [ ] 1.3 Track per-source failures on `CalendarWeek` (set per load, cleared on success). Render a loading indicator and an inline notice with Retry under the calendar header. Drop the once-per-session Google toast for the grid path. Verify: unit test for failure state transitions, plus a demo-mode check of the notice.
-- [ ] 1.4 Add `store::merge_google_tokens` (re-read accounts, copy tokens and refreshed calendar lists only). Use it in the grid load and in `calendar_loop`. Verify: `cargo test -p store` test that a toggle saved during a fetch survives the merge.
-- [ ] 1.5 Record a diagnostics line per grid load: range, events per source, duration, failures. Verify: unit test of the line formatter.
+- [x] 1.1 Load the grid's Outlook range through the core session (`Calendar::new(engine.remote().session())`) instead of `CallLauncher::calendar_view`. Set a pending flag when no engine exists yet and run the load on `BackendEvent::Engine`. Verify: unit test in `crates/app-state` that a load requested before the engine runs once the engine arrives.
+- [x] 1.2 Reload the visible range on each agenda poll result while the calendar section is shown. Verify: unit test that `BackendEvent::Calendar` triggers a grid reload only with the calendar open.
+- [x] 1.3 Track per-source failures on `CalendarWeek` (set per load, cleared on success). Render a loading indicator and an inline notice with Retry under the calendar header. Drop the once-per-session Google toast for the grid path. Verify: unit test for failure state transitions, plus a demo-mode check of the notice.
+- [x] 1.4 Add `store::merge_google_tokens` (re-read accounts, copy tokens and refreshed calendar lists only). Use it in the grid load and in `calendar_loop`. Verify: `cargo test -p store` test that a toggle saved during a fetch survives the merge.
+- [x] 1.5 Record a diagnostics line per grid load: range, events per source, duration, failures. Verify: unit test of the line formatter.
 
 ## 2. Calendar preferences and mailbox working hours (calendar-view-settings)
 

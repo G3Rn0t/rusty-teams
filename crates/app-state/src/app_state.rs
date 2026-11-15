@@ -164,7 +164,6 @@ pub struct AppState {
     /// Bumped on cancel so a late loopback result is discarded.
     pub google_connect_generation: u64,
     /// Google week-load failure already surfaced as a notice this session.
-    pub google_sync_notice_shown: bool,
     pub calendar_nudge: Option<tokio::sync::mpsc::UnboundedSender<()>>,
     pub calls_list: crate::call::CallsList,
     pub speed_dial: Vec<crate::call::SpeedDialEntry>,
@@ -332,7 +331,6 @@ impl AppState {
             calendar_events: Vec::new(),
             google_connect_pending: None,
             google_connect_generation: 0,
-            google_sync_notice_shown: false,
             calendar_nudge: None,
             calls_list: crate::call::CallsList::default(),
             speed_dial,
@@ -1172,7 +1170,10 @@ impl AppState {
                 self.call_launcher = Some(launcher);
                 self.load_own_time_zone(cx);
             }
-            BackendEvent::Calendar(events) => self.apply_calendar(events, cx),
+            BackendEvent::Calendar(events) => {
+                self.apply_calendar(events, cx);
+                self.refresh_visible_calendar(cx);
+            }
             BackendEvent::CalendarNudge(nudge) => self.calendar_nudge = Some(nudge),
             BackendEvent::Ring(event) => self.on_engine_event(event, cx),
             BackendEvent::ThreadChanged(conversation_id) => {
@@ -1181,6 +1182,7 @@ impl AppState {
             BackendEvent::Engine(engine) => {
                 crate::agent_api::engine_ready(engine.clone(), cx);
                 self.engine = Some(engine);
+                self.run_pending_calendar_load(cx);
                 self.resend_outbox(cx);
                 self.refresh_scheduled(cx);
                 self.refresh_translation_settings(cx);
