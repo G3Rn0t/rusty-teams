@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.4.0-joe.5] - 2026-11-15
+
+### Added
+
+- Linux and macOS noise suppression Auto runs DeepFilterNet plus a speech gate
+  on the Pulse/CoreAudio capture hook, so background noise stays quiet without
+  leaving the device track. Live-tested in a call.
+
+### Fixed
+
+- A failed Google token refresh is a calendar load error with retry, not an
+  empty week. Local Linux installs refuse a release build that is missing the
+  Desktop client secret.
+
+
 ## [0.4.0-joe.4] - 2026-11-15
 
 ### Added

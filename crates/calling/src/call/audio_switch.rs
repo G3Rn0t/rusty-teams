@@ -200,11 +200,14 @@ pub(super) fn sync_software_audio(
     wanted: Option<SoftwareAudioPlan>,
     restart: bool,
     software_audio: &mut Option<SoftwareAudio>,
+    mic_settings: MicSettings,
     control: &CallControl,
     timeline: &Timeline,
 ) {
     let running = software_audio.as_ref().map(|audio| audio.plan);
     if running == wanted && !restart {
+        // Keep the capture hook off while MicChain owns the mic (computer sound / Off / music).
+        crate::noise_stage::apply_for_outgoing(mic_settings, software_audio.is_none());
         return;
     }
     if running.is_some() {
@@ -215,6 +218,7 @@ pub(super) fn sync_software_audio(
     let Some(plan) = wanted else {
         restore_device_track(factory, input, peer, device_track, timeline);
         control.send(CallUpdate::ShareSound(false));
+        crate::noise_stage::apply_for_outgoing(mic_settings, true);
         return;
     };
     let started = SoftwareAudio::start(
@@ -263,6 +267,7 @@ pub(super) fn sync_software_audio(
             control.send(CallUpdate::Notice(notice.into()));
         }
     }
+    crate::noise_stage::apply_for_outgoing(mic_settings, software_audio.is_none());
 }
 
 pub(super) async fn record_track(

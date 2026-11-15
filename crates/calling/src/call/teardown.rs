@@ -101,6 +101,8 @@ pub(super) async fn tear_down(
     report: &mut CallReport,
     cancelled: bool,
 ) {
+    // Drop DeepFilterNet capture hook so the next call starts without a stale post-processor.
+    crate::noise_stage::clear();
     // Stop keep-alive / broker first so Teams does not see us as still present.
     live.broker_running.store(false, Ordering::SeqCst);
     if let Some(broker) = live.broker.take() {
