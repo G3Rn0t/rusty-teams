@@ -10,9 +10,13 @@ set -euo pipefail
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$root"
 
-base="${1:-}"
-if [[ -n "$base" ]]; then
-  range="${base}...HEAD"
+arg="${1:-}"
+if [[ -n "$arg" ]]; then
+  if [[ "$arg" == *..* ]]; then
+    range="$arg"
+  else
+    range="${arg}...HEAD"
+  fi
   mapfile -t changed < <(git diff --name-only "$range" -- . ':!vendor' || true)
 else
   mapfile -t changed < <(git diff --name-only HEAD -- . ':!vendor'; git diff --name-only --cached -- . ':!vendor' | sort -u)
