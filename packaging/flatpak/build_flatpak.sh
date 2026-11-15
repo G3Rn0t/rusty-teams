@@ -39,10 +39,14 @@ fi
 chmod +x "$GENERATOR"
 
 echo "Generating cargo sources from Cargo.lock → $GENERATED"
+# Jammy apt python3-tomlkit (0.9.x) has no TOMLDocument.unwrap(); the upstream
+# flatpak-cargo-generator needs tomlkit>=0.13. Prefer uv, else pip --user.
+CARGO_GEN_DEPS=('aiohttp>=3.9.5,<4' 'tomlkit>=0.13.3,<1' 'PyYAML>=6.0.2,<7')
 if command -v uv >/dev/null 2>&1; then
-  uv run --with 'aiohttp>=3.9.5,<4' --with 'tomlkit>=0.13.3,<1' --with 'PyYAML>=6.0.2,<7' \
+  uv run --with "${CARGO_GEN_DEPS[0]}" --with "${CARGO_GEN_DEPS[1]}" --with "${CARGO_GEN_DEPS[2]}" \
     "$GENERATOR" "$ROOT/Cargo.lock" -o "$GENERATED"
 else
+  python3 -m pip install --user -q "${CARGO_GEN_DEPS[@]}"
   python3 "$GENERATOR" "$ROOT/Cargo.lock" -o "$GENERATED"
 fi
 [[ -s "$GENERATED" ]] || {
