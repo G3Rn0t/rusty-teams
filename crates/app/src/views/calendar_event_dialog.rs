@@ -1,11 +1,13 @@
 use std::collections::HashMap;
 
+use app_base::format::Zone;
 use app_ui_kit::layout::{COMFY_RUNWAY_WIDTH, SIDEBAR_WIDTH};
+use app_ui_kit::render::hooks::open_link;
 use app_ui_kit::render::{Block, layout_blocks, render_blocks, strip_image_placeholders};
 use chatsvc::{
     CalendarEvent, CalendarSource, DialIn, EventAttendee, Reply, ResponseType, join_info_text,
 };
-use chrono::{Datelike, Local, Offset, Weekday};
+use chrono::{Datelike, Weekday};
 use gpui_kit::assets::IconName;
 use gpui_kit::component::Sizable as _;
 use gpui_kit::component::button::{Button, ButtonVariants as _};
@@ -142,7 +144,11 @@ impl EventPeek {
             self.agenda = None;
             return;
         };
-        if self.agenda.as_ref().is_some_and(|(source, _)| source == html) {
+        if self
+            .agenda
+            .as_ref()
+            .is_some_and(|(source, _)| source == html)
+        {
             return;
         }
         let blocks = strip_image_placeholders(layout_blocks(&teams_core::html_to_spans(html)));
@@ -150,7 +156,11 @@ impl EventPeek {
     }
 
     fn agenda_element(&self, cx: &App) -> Option<AnyElement> {
-        if let Some((_, blocks)) = self.agenda.as_ref().filter(|(_, blocks)| !blocks.is_empty()) {
+        if let Some((_, blocks)) = self
+            .agenda
+            .as_ref()
+            .filter(|(_, blocks)| !blocks.is_empty())
+        {
             return Some(
                 div()
                     .w_full()
@@ -161,7 +171,11 @@ impl EventPeek {
                     .into_any_element(),
             );
         }
-        let preview = self.event.body_preview.clone().filter(|value| !value.is_empty())?;
+        let preview = self
+            .event
+            .body_preview
+            .clone()
+            .filter(|value| !value.is_empty())?;
         Some(
             div()
                 .w_full()
@@ -206,8 +220,9 @@ impl EventPeek {
         } else {
             String::new()
         };
-        self.state
-            .update(cx, |state, cx| state.respond_to_event(&key, reply, &comment, cx));
+        self.state.update(cx, |state, cx| {
+            state.respond_to_event(&key, reply, &comment, cx)
+        });
         self.close(cx);
     }
 
@@ -222,8 +237,9 @@ impl EventPeek {
         } else {
             String::new()
         };
-        self.state
-            .update(cx, |state, cx| state.respond_to_event(&master, reply, &comment, cx));
+        self.state.update(cx, |state, cx| {
+            state.respond_to_event(&master, reply, &comment, cx)
+        });
         self.close(cx);
     }
 
@@ -331,7 +347,11 @@ impl EventPeek {
         if self.event.source != CalendarSource::Google {
             return None;
         }
-        let name = self.event.calendar_name.clone().filter(|value| !value.is_empty())?;
+        let name = self
+            .event
+            .calendar_name
+            .clone()
+            .filter(|value| !value.is_empty())?;
         Some(
             h_flex()
                 .gap(px(ROW_GAP))
@@ -394,7 +414,7 @@ impl EventPeek {
                                 .text_color(theme::accent_text())
                                 .cursor_pointer()
                                 .child(tr("calendar.peek.view_source"))
-                                .on_click(move |_, _, cx| cx.open_url(&open)),
+                                .on_click(move |_, _, cx| open_link(&open, cx)),
                         ),
                 )
                 .into_any_element(),
@@ -502,7 +522,7 @@ impl EventPeek {
                     .outline()
                     .icon(IconName::ExternalLink)
                     .label(tr("calendar.peek.open_in_google"))
-                    .on_click(move |_, _, cx| cx.open_url(&url))
+                    .on_click(move |_, _, cx| open_link(&url, cx))
                     .into_any_element(),
             );
         }
@@ -526,7 +546,7 @@ impl EventPeek {
                     .outline()
                     .icon(IconName::Mail)
                     .label(tr("calendar.peek.email_guests"))
-                    .on_click(move |_, _, cx| cx.open_url(&mailto))
+                    .on_click(move |_, _, cx| open_link(&mailto, cx))
                     .into_any_element(),
             );
         }
@@ -967,7 +987,7 @@ fn percent_encode_query(value: &str) -> String {
 }
 
 fn is_teams_url(url: &str) -> bool {
-    url.contains("teams.microsoft.com")
+    teams_core::parse_meeting_link(url).is_some()
 }
 
 fn is_google_meet_url(url: &str) -> bool {
@@ -986,11 +1006,11 @@ fn event_detail_score(event: &CalendarEvent) -> u8 {
     u8::from(event.body_html.is_some()) * 32
         + u8::from(!event.attendees.is_empty()) * 16
         + u8::from(
-        event
-            .body_preview
-            .as_ref()
-            .is_some_and(|value| !value.is_empty()),
-    ) * 8
+            event
+                .body_preview
+                .as_ref()
+                .is_some_and(|value| !value.is_empty()),
+        ) * 8
         + u8::from(
             event
                 .location
@@ -1002,26 +1022,27 @@ fn event_detail_score(event: &CalendarEvent) -> u8 {
 }
 
 fn peek_when_label(event: &CalendarEvent) -> String {
-    let offset = Local::now().offset().fix();
-    if is_effective_all_day(event, offset) {
-        let start = event.start.with_timezone(&offset).date_naive();
-        let end = event.end.with_timezone(&offset).date_naive();
+    let start = Zone::Local.at(event.start);
+    let end = Zone::Local.at(event.end);
+    if is_effective_all_day(event, *start.offset()) {
+        let day_label = |date: chrono::NaiveDate| {
+            format!(
+                "{} {}",
+                localized_weekday(date.weekday()),
+                format_peek_date(date)
+            )
+        };
+        let (start, end) = (start.date_naive(), end.date_naive());
         if end > start + chrono::Duration::days(1) {
             return format!(
-                "{} · {} – {}",
+                "{} · {} - {}",
                 tr("calendar.peek.all_day"),
-                start.format("%a, %b %-d"),
-                (end - chrono::Duration::days(1)).format("%a, %b %-d, %Y")
+                day_label(start),
+                day_label(end - chrono::Duration::days(1))
             );
         }
-        return format!(
-            "{} · {}",
-            tr("calendar.peek.all_day"),
-            start.format("%a, %b %-d, %Y")
-        );
+        return format!("{} · {}", tr("calendar.peek.all_day"), day_label(start));
     }
-    let start = event.start.with_timezone(&offset);
-    let end = event.end.with_timezone(&offset);
     let weekday = localized_weekday(start.weekday());
     let date = format_peek_date(start.date_naive());
     let clock = app_base::format::clock_format();
@@ -1115,11 +1136,7 @@ fn localized_weekday(weekday: Weekday) -> &'static str {
 }
 
 fn location_label(event: &CalendarEvent) -> String {
-    if let Some(location) = event
-        .location
-        .clone()
-        .filter(|value| !value.is_empty())
-    {
+    if let Some(location) = event.location.clone().filter(|value| !value.is_empty()) {
         return location;
     }
     if !event.online {
@@ -1169,7 +1186,9 @@ fn rsvp_button(
     has_master: bool,
     peek: Entity<EventPeek>,
 ) -> AnyElement {
-    let button = Button::new(id).label(label).when(chosen, |button| button.primary());
+    let button = Button::new(id)
+        .label(label)
+        .when(chosen, |button| button.primary());
     let button = match reply {
         Reply::Accept => button.icon(IconName::Check),
         Reply::Decline => button.icon(IconName::X),

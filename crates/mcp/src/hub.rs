@@ -390,8 +390,11 @@ impl AgentHub {
         self.wake.notify_waiters();
     }
 
-    pub fn needs_review(&self, conversation_id: &str) -> bool {
-        self.policy().review && self.free_writing(conversation_id).is_none()
+    pub fn needs_review(&self, conversation_id: &str, agent: Option<&str>) -> bool {
+        let granted = self
+            .free_writing(conversation_id)
+            .is_some_and(|grant| grant.agent.is_none() || grant.agent.as_deref() == agent);
+        self.policy().review && !granted
     }
 
     pub fn pending_proposal(&self, conversation_id: &str) -> Option<Proposal> {
@@ -675,7 +678,12 @@ impl AgentHub {
 
     pub async fn wait_events(&self, since: Option<u64>, timeout: Duration) -> (Vec<Event>, u64) {
         let deadline = tokio::time::Instant::now() + timeout;
-        let mut cursor = since.unwrap_or_else(|| self.lock().last_seq);
+        let last_seq = self.lock().last_seq;
+        let mut cursor = match since {
+            Some(cursor) if cursor <= last_seq => cursor,
+            Some(_) => 0,
+            None => last_seq,
+        };
         loop {
             let notified = self.wake.notified();
             tokio::pin!(notified);
@@ -1028,18 +1036,21 @@ mod tests {
     #[test]
     fn a_free_writing_window_skips_review_until_it_ends_or_stops() {
         let (hub, _receiver, _store) = hub_with(open_policy());
-        assert!(hub.needs_review("c1"));
+        let claude = Some("claude");
+        assert!(hub.needs_review("c1", claude));
         hub.grant_free_writing(
             "c1",
             Utc::now() + chrono::Duration::minutes(15),
             Some("claude".to_owned()),
         );
-        assert!(!hub.needs_review("c1"));
-        assert!(hub.needs_review("c2"));
+        assert!(!hub.needs_review("c1", claude));
+        assert!(hub.needs_review("c1", Some("codex")));
+        assert!(hub.needs_review("c1", None));
+        assert!(hub.needs_review("c2", claude));
         hub.stop_free_writing("c1");
-        assert!(hub.needs_review("c1"));
+        assert!(hub.needs_review("c1", claude));
         hub.grant_free_writing("c1", Utc::now() - chrono::Duration::seconds(1), None);
-        assert!(hub.needs_review("c1"));
+        assert!(hub.needs_review("c1", claude));
         let kinds: Vec<Option<DateTime<Utc>>> = hub
             .events_after(0)
             .0
@@ -1148,6 +1159,15 @@ mod tests {
         let (events, next) = hub.wait_events(Some(next), SHORT).await;
         assert_eq!(events.len(), 1);
         assert_eq!(next, 2);
+    }
+
+    #[tokio::test]
+    async fn a_cursor_from_before_a_restart_starts_over() {
+        let (hub, _ui, _store) = hub_with(open_policy());
+        hub.user_typing("c1");
+        let (events, next) = hub.wait_events(Some(500), SHORT).await;
+        assert_eq!(events.len(), 1);
+        assert_eq!(next, 1);
     }
 
     #[tokio::test]

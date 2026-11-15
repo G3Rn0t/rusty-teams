@@ -5,10 +5,14 @@ pub use windows_impl::*;
 
 #[cfg(any(target_os = "linux", target_os = "macos"))]
 mod linux_sound;
+#[cfg(target_os = "linux")]
+mod linux_tray;
 #[cfg(not(windows))]
 mod stub;
 #[cfg(target_os = "linux")]
 mod x11_input;
+#[cfg(target_os = "linux")]
+pub use linux_tray::Tray;
 #[cfg(not(windows))]
 pub use stub::*;
 
@@ -51,11 +55,45 @@ pub struct ShareGeometry {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TrayStatusDuration {
+    HalfHour,
+    OneHour,
+    TwoHours,
+    Today,
+    ThisWeek,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TrayCommand {
     Toggle,
     Open,
-    ToggleSound,
-    ToggleDoNotDisturb,
-    Settings,
+    /// Publish a forced status with no expiry (same as the profile menu).
+    SetStatus(chatsvc::ForcedKind),
+    /// Apply a duration to the currently forced status (ignored when none / Available).
+    SetStatusDuration(TrayStatusDuration),
+    ResetStatus,
+    Notifications,
     Quit,
+}
+
+/// Snapshot the tray menu needs to show presence correctly.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TrayPresence {
+    pub title: String,
+    pub forced: Option<chatsvc::ForcedKind>,
+    pub mention: bool,
+}
+
+impl TrayPresence {
+    pub fn new(
+        title: impl Into<String>,
+        forced: Option<chatsvc::ForcedKind>,
+        mention: bool,
+    ) -> Self {
+        Self {
+            title: title.into(),
+            forced,
+            mention,
+        }
+    }
 }

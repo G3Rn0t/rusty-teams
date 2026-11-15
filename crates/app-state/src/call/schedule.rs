@@ -8,6 +8,7 @@ use super::agenda::demo_join_url;
 use crate::app_state::AppState;
 use crate::runtime;
 
+const AGENDA_KEYS: [&str; 4] = ["body", "bodyContent", "bodyContentType", "bodyPreview"];
 const HALF_HOUR_MINUTES: i64 = 30;
 const DEFAULT_LENGTH_MINUTES: i64 = 30;
 const READ_ONLY_MESSAGE: &str = "Meetings cannot be scheduled in read-only mode.";
@@ -334,11 +335,7 @@ impl AppState {
         .detach();
     }
 
-    pub fn request_calendar_event_peek(
-        &mut self,
-        event: CalendarEvent,
-        cx: &mut Context<Self>,
-    ) {
+    pub fn request_calendar_event_peek(&mut self, event: CalendarEvent, cx: &mut Context<Self>) {
         self.calendar_event_peek_request = Some(event);
         cx.emit(crate::app_state::AppEvent::CalendarEventPeek);
         cx.notify();
@@ -346,15 +343,6 @@ impl AppState {
 
     pub fn take_calendar_event_peek_request(&mut self) -> Option<CalendarEvent> {
         self.calendar_event_peek_request.take()
-    }
-
-    pub fn needs_event_details(event: &CalendarEvent) -> bool {
-        event.source == chatsvc::CalendarSource::Outlook
-            && (event.location.is_none()
-                || event.body_html.is_none()
-                || event.attendees.is_empty()
-                || event.response_counts.is_none()
-                || (event.series && event.series_master_id.is_none()))
     }
 
     pub fn apply_calendar_event_details(
@@ -386,7 +374,7 @@ impl AppState {
         else {
             return;
         };
-        if !Self::needs_event_details(&event) {
+        if event.source != chatsvc::CalendarSource::Outlook {
             return;
         }
         let launcher = self.call_launcher.clone().filter(|_| !self.mode.demo);
@@ -436,7 +424,8 @@ impl AppState {
                 })
                 .unwrap_or(0);
             crate::diagnostics::record(format!(
-                "calendar peek: details ok for {event_id}, preview_chars={preview_chars}"
+                "calendar peek: details ok id_len={}, preview_chars={preview_chars}",
+                event_id.len()
             ));
             this.update(cx, |state, cx| {
                 state.apply_calendar_event_details(&event_id, &details, cx);
@@ -471,14 +460,20 @@ impl AppState {
             else {
                 return;
             };
-            let master = runtime::spawn(async move {
-                launcher.calendar_event_details(&master_id, None).await
-            });
+            let master =
+                runtime::spawn(
+                    async move { launcher.calendar_event_details(&master_id, None).await },
+                );
             let Ok(Ok(master_details)) = master.await else {
                 return;
             };
+            let master_agenda: serde_json::Value = AGENDA_KEYS
+                .iter()
+                .filter_map(|key| Some(((*key).to_owned(), master_details.get(*key)?.clone())))
+                .collect::<serde_json::Map<_, _>>()
+                .into();
             this.update(cx, |state, cx| {
-                state.apply_calendar_event_details(&event_id, &master_details, cx);
+                state.apply_calendar_event_details(&event_id, &master_agenda, cx);
             })
             .ok();
         })

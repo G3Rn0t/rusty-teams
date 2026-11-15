@@ -12,6 +12,7 @@ use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::time::Duration;
 
 use self::{audio_switch::*, bots::*, escalation::*, peer_sdp::*, stats::*, teardown::*};
+
 use chatsvc::TrouterCallback;
 use futures_util::StreamExt;
 use libwebrtc::audio_stream::native::NativeAudioStream;
@@ -119,6 +120,10 @@ const STATS_PERIOD: Duration = Duration::from_millis(200);
 const TICKS_PER_SECOND: u32 = 5;
 const RECONNECT_WINDOW: Duration = Duration::from_secs(30);
 const OUTGOING_TIMEOUT: Duration = Duration::from_secs(90);
+const BROKER_IDLE_WAIT: Duration = Duration::from_millis(500);
+const BROKER_RETRY_WAIT: Duration = Duration::from_secs(3);
+const CAMERA_EFFECTS_FAILED_NOTICE: &str =
+    "Background effects could not start, your camera is sent without them";
 const SETUP_STEP_TIMEOUT: Duration = Duration::from_secs(30);
 const DIRECT_OUTGOING_TIMEOUT: Duration = Duration::from_secs(185);
 const FAR_FUTURE: Duration = Duration::from_secs(60 * 60 * 24 * 365);
@@ -376,6 +381,13 @@ impl CallEngine {
             match control.until_hangup(inner.gate.lock()).await {
                 Ok(guard) => Some(guard),
                 Err(_) => {
+                    if let Plan::Incoming(incoming) = &plan {
+                        inner.unregister_route(incoming.links.call_id());
+                        if let Some(call_leg) = incoming.attached.links.get("callLeg") {
+                            let signaling = inner.signaling(Timeline::new(options.trace));
+                            let _ = signaling.decline(call_leg).await;
+                        }
+                    }
                     let mut state = CallState::Idle;
                     advance(&mut state, CallSignal::Dial, &control);
                     advance(&mut state, CallSignal::LocalLeave, &control);
@@ -591,6 +603,7 @@ async fn drive(
         control.updates(),
     );
     local_video.attach_timeline(timeline.clone());
+    local_video.attach_commands(control.command_sender());
     let mut camera_choice = options.camera.clone();
     if options.start_camera {
         match local_video.preview_camera(&camera_choice) {
@@ -790,8 +803,9 @@ async fn drive(
             let modalities = accepted_modalities(
                 matches!(video_answer, AnswerVideo::Send(_)) && answered.camera_mid.is_some(),
             );
-            let acknowledged = signaling
-                .accept(
+            let acknowledged = setup_step(
+                control,
+                signaling.accept(
                     acceptance_url,
                     &Answer {
                         from: &participant,
@@ -800,8 +814,9 @@ async fn drive(
                         callbacks: &links,
                         modalities: &modalities,
                     },
-                )
-                .await?;
+                ),
+            )
+            .await?;
             negotiator.answered_incoming(attached.from_mixer);
             remote_set = true;
             media_links.extend(attached.links.clone());
@@ -1037,6 +1052,10 @@ async fn drive(
             }
             let old = std::mem::replace(&mut current, pending.session);
             old.peer.close();
+            reconnect_deadline = None;
+            if callee_gate.media_connected() {
+                advance(state, CallSignal::MediaConnected, control);
+            }
             if let Some(audio) = &software_audio
                 && let Err(error) = swap_audio_track(&current.peer, &audio.track)
             {
@@ -2677,6 +2696,10 @@ async fn drive(
                 }
             },
             _ = stats_tick.tick(), if remote_set => {
+                if local_video.take_effects_failure() {
+                    timeline.record("camera effects failed", "segmentation model did not load");
+                    control.send(CallUpdate::Notice(CAMERA_EFFECTS_FAILED_NOTICE.into()));
+                }
                 let speaking = active_speakers::speaking_sources(&active_speakers::audio_sources(&current.peer));
                 if speaking != speaking_sources {
                     if speaking_sources.is_empty() && !speaker_sources_seen {

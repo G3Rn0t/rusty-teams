@@ -66,10 +66,7 @@ pub struct AttendeeResponseCounts {
 
 impl AttendeeResponseCounts {
     pub fn is_empty(self) -> bool {
-        self.accepted == 0
-            && self.declined == 0
-            && self.tentative == 0
-            && self.not_responded == 0
+        self.accepted == 0 && self.declined == 0 && self.tentative == 0 && self.not_responded == 0
     }
 }
 
@@ -472,9 +469,7 @@ fn sanitize_html_hrefs(html: &str) -> String {
 fn url_is_safe_href(url: &str) -> bool {
     let trimmed = url.trim();
     let lower = trimmed.to_ascii_lowercase();
-    lower.starts_with("https://")
-        || lower.starts_with("http://")
-        || lower.starts_with("mailto:")
+    lower.starts_with("https://") || lower.starts_with("http://") || lower.starts_with("mailto:")
 }
 
 fn attendee_response(label: &str) -> ResponseType {
@@ -546,7 +541,10 @@ pub fn strip_html(input: &str) -> String {
             _ => {}
         }
     }
-    html_entities(&out).split_whitespace().collect::<Vec<_>>().join(" ")
+    html_entities(&out)
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ")
 }
 
 fn html_entities(input: &str) -> String {
@@ -580,8 +578,13 @@ fn series_flag(entry: &Value) -> bool {
         .as_deref()
     {
         Some("occurrence" | "exception" | "seriesMaster") => true,
-        _ => entry.get("seriesMasterId").and_then(Value::as_str).is_some()
-            || entry.get("recurrence").is_some(),
+        _ => {
+            entry
+                .get("seriesMasterId")
+                .and_then(Value::as_str)
+                .is_some()
+                || entry.get("recurrence").is_some()
+        }
     }
 }
 
@@ -617,8 +620,8 @@ pub fn response_counts_from_attendees(entry: &Value) -> Option<AttendeeResponseC
 
 /// Merge Graph / detail fields into a calendar event without wiping list data.
 pub fn apply_event_details(event: &mut CalendarEvent, entry: &Value) {
-    if let Some(location) = location_text(entry) {
-        event.location = Some(location);
+    if entry.get("location").is_some() || entry.get("locationDisplayName").is_some() {
+        event.location = location_text(entry);
     }
     if let Some(preview) = body_preview_text(entry) {
         event.body_preview = Some(preview);
@@ -633,12 +636,9 @@ pub fn apply_event_details(event: &mut CalendarEvent, entry: &Value) {
         event.series_master_id = Some(master);
         event.series = true;
     }
-    if let Some(counts) = response_counts_from_attendees(entry) {
-        event.response_counts = Some(counts);
-    }
-    let attendees = attendees_from_entry(entry);
-    if !attendees.is_empty() {
-        event.attendees = attendees;
+    if entry.get("attendees").is_some_and(Value::is_array) {
+        event.response_counts = response_counts_from_attendees(entry);
+        event.attendees = attendees_from_entry(entry);
     }
     if let Some(name) = entry
         .pointer("/organizer/emailAddress/name")
@@ -797,10 +797,7 @@ mod tests {
             standup.thread_id.as_deref(),
             Some("19:meeting_demo1@thread.v2")
         );
-        assert_eq!(
-            standup.location.as_deref(),
-            Some("Microsoft Teams Meeting")
-        );
+        assert_eq!(standup.location.as_deref(), Some("Microsoft Teams Meeting"));
         assert_eq!(
             standup.body_preview.as_deref(),
             Some("Daily agenda and blockers")
@@ -818,14 +815,8 @@ mod tests {
 
     #[test]
     fn strip_html_flattens_markup_for_peek_preview() {
-        assert_eq!(
-            strip_html("<p>Hello&nbsp;<b>team</b></p>"),
-            "Hello team"
-        );
-        assert_eq!(
-            strip_html("<p>NEUE</p><p>Agenda</p>"),
-            "NEUE Agenda"
-        );
+        assert_eq!(strip_html("<p>Hello&nbsp;<b>team</b></p>"), "Hello team");
+        assert_eq!(strip_html("<p>NEUE</p><p>Agenda</p>"), "NEUE Agenda");
         assert_eq!(truncate_preview(&"x".repeat(4_100)).chars().count(), 4_001);
     }
 
@@ -855,7 +846,10 @@ mod tests {
         assert_eq!(event.location.as_deref(), Some("Room A"));
         assert!(event.series);
         assert_eq!(event.series_master_id.as_deref(), Some("master"));
-        assert_eq!(event.join_url.as_deref(), Some("https://teams.microsoft.com/l/meetup-join/z"));
+        assert_eq!(
+            event.join_url.as_deref(),
+            Some("https://teams.microsoft.com/l/meetup-join/z")
+        );
         let counts = event.response_counts.expect("counts");
         assert_eq!(counts.accepted, 1);
         assert_eq!(counts.tentative, 1);
@@ -899,10 +893,7 @@ mod tests {
                 "body": {"contentType": "text", "content": "Line1\rLine2\r\nLine3"}
             }),
         );
-        assert_eq!(
-            event.body_html.as_deref(),
-            Some("Line1<br>Line2<br>Line3")
-        );
+        assert_eq!(event.body_html.as_deref(), Some("Line1<br>Line2<br>Line3"));
     }
 
     #[test]
@@ -926,6 +917,35 @@ mod tests {
         assert!(!html.to_ascii_lowercase().contains("javascript:"));
         assert!(html.contains(r#"href="""#) || html.contains("href=''"));
         assert!(html.contains(r#"href='https://ok.example'"#));
+    }
+
+    #[test]
+    fn details_clear_a_removed_location_and_attendees() {
+        let mut event = CalendarEvent {
+            object_id: "stale".into(),
+            location: Some("Room 1".into()),
+            attendees: vec![EventAttendee {
+                name: "Someone".into(),
+                address: None,
+                response: ResponseType::Accepted,
+                required: true,
+            }],
+            response_counts: Some(AttendeeResponseCounts {
+                accepted: 1,
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+        apply_event_details(&mut event, &serde_json::json!({"subject": "kept"}));
+        assert_eq!(event.location.as_deref(), Some("Room 1"));
+        assert_eq!(event.attendees.len(), 1);
+        apply_event_details(
+            &mut event,
+            &serde_json::json!({"location": {"displayName": ""}, "attendees": []}),
+        );
+        assert_eq!(event.location, None);
+        assert!(event.attendees.is_empty());
+        assert_eq!(event.response_counts, None);
     }
 
     #[test]

@@ -238,8 +238,8 @@ pub(super) async fn poll_broker(
     while running.load(Ordering::SeqCst) {
         match signaling.poll_broker(&url).await {
             Ok(Some(next)) => url = next,
-            Ok(None) => {}
-            Err(_) => return,
+            Ok(None) => tokio::time::sleep(BROKER_IDLE_WAIT).await,
+            Err(_) => tokio::time::sleep(BROKER_RETRY_WAIT).await,
         }
     }
 }

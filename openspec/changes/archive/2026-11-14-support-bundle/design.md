@@ -4,7 +4,7 @@
 
 See proposal.md — Why. Today `app_base::diagnostics` appends lines to `diagnostics.log` (1 MB rotate). Call reports already scrub and save under `call-reports/`. Settings About only shows version/build. Help must reuse those paths and the existing scrubber without inventing a new shell surface (`docs/design/islands/SPEC.md` Dialog only).
 
-Path and issue-target choices are recorded in ADR 0012 (`docs/decisions/0012-local-diagnostic-data-and-upstream-issues.md`).
+Path and issue-target choices are recorded in ADR 0013 (`docs/decisions/0013-local-diagnostic-data-and-upstream-issues.md`).
 
 ## Goals / Non-Goals
 

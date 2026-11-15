@@ -163,8 +163,6 @@ pub struct AppState {
     pub google_connect_pending: Option<String>,
     /// Bumped on cancel so a late loopback result is discarded.
     pub google_connect_generation: u64,
-    /// Google week-load failure already surfaced as a notice this session.
-    pub google_sync_notice_shown: bool,
     pub calendar_nudge: Option<tokio::sync::mpsc::UnboundedSender<()>>,
     pub calls_list: crate::call::CallsList,
     pub speed_dial: Vec<crate::call::SpeedDialEntry>,
@@ -216,6 +214,8 @@ pub struct AppState {
     pub rsvp_send_response: bool,
     pub meeting_toasts: crate::call::MeetingToasts,
     pub demo_meetings: Vec<chatsvc::CalendarEvent>,
+    /// Google week-load failure already surfaced as a notice this session.
+    pub google_sync_notice_shown: bool,
     pub calendar_week: crate::call::week::CalendarWeek,
     /// Bumped when the hour grid should align to local «now» (open / Today / day-week span).
     pub calendar_scroll_to_now: u64,
@@ -332,7 +332,6 @@ impl AppState {
             calendar_events: Vec::new(),
             google_connect_pending: None,
             google_connect_generation: 0,
-            google_sync_notice_shown: false,
             calendar_nudge: None,
             calls_list: crate::call::CallsList::default(),
             speed_dial,
@@ -384,6 +383,7 @@ impl AppState {
             rsvp_send_response: true,
             meeting_toasts: crate::call::MeetingToasts::default(),
             demo_meetings: Vec::new(),
+            google_sync_notice_shown: false,
             calendar_week: crate::call::week::CalendarWeek::default(),
             calendar_scroll_to_now: 0,
             call_backgrounds: if mode.demo {
@@ -637,7 +637,7 @@ impl AppState {
                 .cloned()
                 .collect();
         }
-        self.resolve_pending_avatars();
+        self.resolve_pending_avatars(&[]);
         self.sync_presence();
     }
 
@@ -666,9 +666,9 @@ impl AppState {
         }
         if let Some(engine) = self.engine.clone().filter(|_| !uncached.is_empty()) {
             self.directory.mark_avatars_pending(&uncached);
-            let done = data::fetch_avatars(&engine, uncached);
-            self.on_done(done, cx, |state, cx| {
-                state.resolve_pending_avatars();
+            let done = data::fetch_avatars(&engine, uncached.clone());
+            self.on_done(done, cx, move |state, cx| {
+                state.resolve_pending_avatars(&uncached);
                 cx.emit(AppEvent::Directory);
                 cx.notify();
             });
@@ -757,10 +757,12 @@ impl AppState {
         .detach();
     }
 
-    fn resolve_pending_avatars(&mut self) {
+    fn resolve_pending_avatars(&mut self, requested: &[String]) {
         for user_id in self.directory.pending_avatars() {
-            if let Some(cached) = data::cached_avatar(&self.store, &user_id) {
-                self.directory.set_avatar(&user_id, cached);
+            match data::cached_avatar(&self.store, &user_id) {
+                Some(cached) => self.directory.set_avatar(&user_id, cached),
+                None if requested.contains(&user_id) => self.directory.mark_avatar_failed(&user_id),
+                None => {}
             }
         }
     }

@@ -104,6 +104,15 @@ pub(super) struct GlareResend {
     pub(super) at: Instant,
 }
 
+pub(super) struct AnsweredMedia {
+    pub(super) remote: RemoteOffer,
+    /// Teams renegotiation offer that produced this answer (for receive-slot mapping).
+    pub(super) offer_sdp: String,
+    pub(super) answer_sdp: String,
+    pub(super) camera_mid: Option<String>,
+    pub(super) receiving_share_mid: Option<String>,
+}
+
 pub(super) fn answers_offer(callback_path: &str, reply_tags: &[String]) -> bool {
     match callback_tag(callback_path) {
         Some(tag) if !reply_tags.is_empty() => reply_tags.contains(&tag),
@@ -289,15 +298,6 @@ pub(super) async fn create_offer(
         plan,
         modalities: accepted_modalities(false),
     })
-}
-
-pub(super) struct AnsweredMedia {
-    pub(super) remote: RemoteOffer,
-    /// Teams renegotiation offer that produced this answer (for receive-slot mapping).
-    pub(super) offer_sdp: String,
-    pub(super) answer_sdp: String,
-    pub(super) camera_mid: Option<String>,
-    pub(super) receiving_share_mid: Option<String>,
 }
 
 pub(super) fn main_video_mid(remote: &RemoteOffer) -> Option<String> {
@@ -688,37 +688,6 @@ pub(super) fn offer_reply_tags(body: &serde_json::Value) -> Vec<String> {
         .collect()
 }
 
-#[cfg(test)]
-mod reply_tag_tests {
-    use super::*;
-
-    #[test]
-    fn answers_and_rejections_match_the_offer_by_tag() {
-        let tags = vec!["aaaa1111".to_owned(), "bbbb2222".to_owned()];
-        assert!(answers_offer(
-            "callAgent/c/aaaa1111/call/mediaAnswer/",
-            &tags
-        ));
-        assert!(answers_offer("callAgent/c/bbbb2222/call/rejection/", &tags));
-        assert!(!answers_offer(
-            "callAgent/c/cccc3333/call/mediaAnswer/",
-            &tags
-        ));
-        assert!(answers_offer("callAgent/c/cccc3333/call/mediaAnswer/", &[]));
-    }
-
-    #[test]
-    fn an_offer_names_both_reply_tags() {
-        let body = serde_json::json!({"mediaNegotiation": {"links": {
-            "mediaAnswer": "https://t.example/callAgent/c/aaaa1111/call/mediaAnswer/",
-            "rejection": "https://t.example/callAgent/c/bbbb2222/call/rejection/"}}});
-        assert_eq!(
-            offer_reply_tags(&body),
-            vec!["aaaa1111".to_owned(), "bbbb2222".to_owned()]
-        );
-    }
-}
-
 pub(super) async fn apply_answer(
     peer: &PeerConnection,
     teams_answer: &str,
@@ -803,5 +772,36 @@ fn mask_address(token: &str) -> String {
         "<addr>".to_owned()
     } else {
         token.to_owned()
+    }
+}
+
+#[cfg(test)]
+mod reply_tag_tests {
+    use super::*;
+
+    #[test]
+    fn answers_and_rejections_match_the_offer_by_tag() {
+        let tags = vec!["aaaa1111".to_owned(), "bbbb2222".to_owned()];
+        assert!(answers_offer(
+            "callAgent/c/aaaa1111/call/mediaAnswer/",
+            &tags
+        ));
+        assert!(answers_offer("callAgent/c/bbbb2222/call/rejection/", &tags));
+        assert!(!answers_offer(
+            "callAgent/c/cccc3333/call/mediaAnswer/",
+            &tags
+        ));
+        assert!(answers_offer("callAgent/c/cccc3333/call/mediaAnswer/", &[]));
+    }
+
+    #[test]
+    fn an_offer_names_both_reply_tags() {
+        let body = serde_json::json!({"mediaNegotiation": {"links": {
+            "mediaAnswer": "https://t.example/callAgent/c/aaaa1111/call/mediaAnswer/",
+            "rejection": "https://t.example/callAgent/c/bbbb2222/call/rejection/"}}});
+        assert_eq!(
+            offer_reply_tags(&body),
+            vec!["aaaa1111".to_owned(), "bbbb2222".to_owned()]
+        );
     }
 }

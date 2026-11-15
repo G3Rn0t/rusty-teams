@@ -4,3 +4,17 @@ dist/
 
 # Local Google OAuth for Connect (never commit)
 .env.google.local
+# Local research under docs/; track design SoT and ADRs.
+docs/*
+!docs/design/
+docs/design/*
+!docs/design/islands/
+docs/design/islands/*
+!docs/design/islands/SPEC.md
+!docs/decisions/
+!docs/decisions/**
+!docs/agent-actions.md
+!docs/build-windows.md
+!docs/research/
+docs/research/*
+!docs/research/internal-endpoints.md

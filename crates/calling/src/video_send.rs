@@ -196,6 +196,9 @@ pub struct LocalVideo {
     mode: VideoMode,
     hub: Arc<VideoHub>,
     updates: UnboundedSender<CallUpdate>,
+    commands: Option<UnboundedSender<CallCommand>>,
+    camera_generation: Arc<AtomicU64>,
+    share_generation: Arc<AtomicU64>,
     camera: Outgoing,
     screen: Outgoing,
     lines: Option<VideoLines>,
@@ -227,6 +230,9 @@ impl LocalVideo {
             mode,
             hub,
             updates,
+            commands: None,
+            camera_generation: Arc::new(AtomicU64::new(0)),
+            share_generation: Arc::new(AtomicU64::new(0)),
             camera: Outgoing::new(factory, CAMERA_LABEL, PatternKind::Camera, false),
             screen: Outgoing::new(factory, SCREEN_LABEL, PatternKind::Screen, true),
             lines: None,
@@ -243,6 +249,10 @@ impl LocalVideo {
             portal_bound: false,
             camera_bitrate_cap: None,
         }
+    }
+
+    pub fn attach_commands(&mut self, commands: UnboundedSender<CallCommand>) {
+        self.commands = Some(commands);
     }
 
     pub fn attach_timeline(&mut self, timeline: Timeline) {
@@ -451,6 +461,10 @@ impl LocalVideo {
         self.screen.track.clone()
     }
 
+    pub fn take_effects_failure(&self) -> bool {
+        self.blur.take_unavailable()
+    }
+
     pub fn blur_average_ms(&self) -> Option<f32> {
         (self.camera_on() && self.blur.active()).then(|| self.blur.average_ms())
     }
@@ -656,10 +670,24 @@ impl LocalVideo {
         .reporting_size(self.screen.frame_size.clone())
     }
 
-    fn report_failure(&self, notice_key: &'static str) -> impl FnOnce(String) + Send + 'static {
+    /// A capture thread that was replaced meanwhile must not switch off its successor.
+    fn report_failure(
+        &self,
+        notice_key: &'static str,
+        generation: &Arc<AtomicU64>,
+        switch_off: CallCommand,
+    ) -> impl FnOnce(String) + Send + 'static {
         let updates = self.updates.clone();
+        let commands = self.commands.clone();
+        let started = generation.fetch_add(1, Ordering::SeqCst) + 1;
+        let generation = generation.clone();
         move |reason| {
             let _ = updates.send(CallUpdate::Notice(notice_with_detail(notice_key, reason)));
+            if generation.load(Ordering::SeqCst) == started
+                && let Some(commands) = commands
+            {
+                let _ = commands.send(switch_off);
+            }
         }
     }
 
@@ -717,7 +745,11 @@ impl LocalVideo {
                         }
                     },
                     move |buffer| sink.push(buffer),
-                    self.report_failure(CAMERA_STOPPED_NOTICE),
+                    self.report_failure(
+                        CAMERA_STOPPED_NOTICE,
+                        &self.camera_generation,
+                        CallCommand::SetCamera(false),
+                    ),
                 )?
             }
         })
@@ -741,6 +773,7 @@ impl LocalVideo {
     }
 
     pub fn stop_camera(&mut self) {
+        self.camera_generation.fetch_add(1, Ordering::SeqCst);
         self.camera_preview = false;
         self.camera.capture = None;
         self.blur.set_cutout(None);
@@ -837,7 +870,11 @@ impl LocalVideo {
                     source.clone(),
                     self.share_fps.clone(),
                     move |buffer| sink.push(buffer),
-                    self.report_failure(SCREEN_SHARE_STOPPED_NOTICE),
+                    self.report_failure(
+                        SCREEN_SHARE_STOPPED_NOTICE,
+                        &self.share_generation,
+                        CallCommand::StopShare,
+                    ),
                 )?,
             };
             self.screen.capture = Some(capture);
@@ -848,6 +885,7 @@ impl LocalVideo {
     }
 
     pub fn stop_share(&mut self) {
+        self.share_generation.fetch_add(1, Ordering::SeqCst);
         self.portal_generation = self.portal_generation.wrapping_add(1);
         self.portal_armed = false;
         self.portal_keep = false;

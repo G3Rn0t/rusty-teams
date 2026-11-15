@@ -7,28 +7,6 @@ pub(super) struct Recording {
     pub(super) per_second: Vec<(f32, f32)>,
 }
 
-pub(super) fn withhold_media(
-    muted: &mut bool,
-    audio: &AudioSetup,
-    software_audio: Option<&SoftwareAudio>,
-    remote: &RemoteCall,
-    local_video: &mut LocalVideo,
-    control: &CallControl,
-) {
-    *muted = apply_mute(
-        MuteCommand::Mute,
-        *muted,
-        audio,
-        software_audio,
-        remote,
-        control,
-    );
-    if local_video.camera_on() {
-        local_video.stop_camera();
-        control.send(CallUpdate::Camera(false));
-    }
-}
-
 pub(super) fn record_audio_devices(
     timeline: &Timeline,
     lists: &devices::DeviceLists,
@@ -132,6 +110,28 @@ pub(super) fn silence_for_hold(
     }
     if let Some(software_audio) = software_audio {
         software_audio.set_microphone_muted(silent);
+    }
+}
+
+pub(super) fn withhold_media(
+    muted: &mut bool,
+    audio: &AudioSetup,
+    software_audio: Option<&SoftwareAudio>,
+    remote: &RemoteCall,
+    local_video: &mut LocalVideo,
+    control: &CallControl,
+) {
+    *muted = apply_mute(
+        MuteCommand::Mute,
+        *muted,
+        audio,
+        software_audio,
+        remote,
+        control,
+    );
+    if local_video.camera_on() {
+        local_video.stop_camera();
+        control.send(CallUpdate::Camera(false));
     }
 }
 
@@ -244,6 +244,9 @@ pub(super) fn sync_software_audio(
                 timeline.record("computer sound warning", warning.clone());
             }
             control.send(CallUpdate::ShareSound(plan.computer_sound));
+            if let Some(notice) = audio.microphone_notice {
+                control.send(CallUpdate::Notice(notice.into()));
+            }
             *software_audio = Some(audio);
         }
         Err(error) => {
