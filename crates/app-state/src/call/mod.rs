@@ -59,7 +59,7 @@ pub use prejoin::{AudioChoice, JoinOptions, PendingJoin, load_join_options};
 pub use preview::{CameraPreview, preview_backgrounds};
 pub use record_rights::{RecordBlock, RecordFeature};
 pub use recording_menu::{RecordAction, RecordingChip, record_actions, recording_chip};
-pub use reminder::{MeetingToasts, ReminderPhase, subtitle as meeting_subtitle};
+pub use reminder::{MeetingToast, MeetingToasts, ReminderPhase, subtitle as meeting_subtitle};
 pub use report::load_enabled as load_report_enabled;
 pub use ring::{MissedCall, RingEntry, Rings};
 pub use schedule::{FormValues, Invitee, default_window, draft_from_form};

@@ -39,8 +39,12 @@ if ! grep -aFq "apps.googleusercontent.com" "$BIN"; then
 fi
 
 if $restart; then
+  # Binary is installed as rusty-teams (/usr/local) and teams (~/.local); kill both.
+  pkill -x rusty-teams 2>/dev/null || true
   pkill -x teams 2>/dev/null || true
   sleep 1
+  # Stale single-instance socket keeps a deleted-exe process as primary.
+  rm -f "${XDG_RUNTIME_DIR:-/tmp}/rusty-teams-${USER}.sock"
 fi
 
 mkdir -p "$HOME/.local/bin" \
