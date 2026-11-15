@@ -217,6 +217,10 @@ pub struct AppState {
     pub demo_meetings: Vec<chatsvc::CalendarEvent>,
     pub calendar_week: crate::call::week::CalendarWeek,
     pub calendar_prefs: crate::call::calendar_prefs::CalendarPrefs,
+    /// Month the mini month shows after the user moved it; `None` follows the grid.
+    pub calendar_mini_month: Option<chrono::NaiveDate>,
+    /// Calendar list groups expanded with Show all (this session only).
+    pub calendar_expanded_groups: Vec<String>,
     /// Mailbox time zone name, written back unchanged with the work hours.
     pub mailbox_time_zone: Option<String>,
     /// Bumped when the hour grid should align to local «now» (open / Today / day-week span).
@@ -390,6 +394,8 @@ impl AppState {
                 calendar_prefs.initial_span(),
             ),
             calendar_prefs,
+            calendar_mini_month: None,
+            calendar_expanded_groups: Vec::new(),
             mailbox_time_zone: None,
             calendar_scroll_to_now: 0,
             call_backgrounds: if mode.demo {

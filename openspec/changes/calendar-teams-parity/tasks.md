@@ -48,13 +48,13 @@
   Verify: unit tests for row height and label text, plus a demo check of 15/30/60.
 - [x] 4.5 Now line: thin and light across all visible days, thicker accent line with a dot in today's column. Verify: demo check in Week.
 - [x] 4.6 Event blocks: bold title with the organizer on the same line, more title lines for tall blocks, series icon, block and chip colours from the calendar colour. Join and the source label stay. Apply the colours to all-day and month chips. Verify: demo check, plus the existing week-grid tests stay green.
-- [ ] 4.7 Header: pane toggle (state in prefs), "Calendar" title moved to the pane, view menu with a localized span label. Verify: layout_guard header checks at 640/1280/1920 px.
-- [ ] 4.8 Localize all strings in `calendar_view.rs`, `calendar_month.rs`, `calendar_date_picker.rs` and `week_grid` labels through `tr()`, with new `calendar.view.*` keys (en + de) in `app.yml`. Verify: `cargo test -p app i18n` (every key has en and de) and a German demo check.
+- [x] 4.7 Header: pane toggle (state in prefs), "Calendar" title moved to the pane, view menu with a localized span label. Verify: layout_guard header checks at 640/1280/1920 px.
+- [x] 4.8 Localize all strings in `calendar_view.rs`, `calendar_month.rs`, `calendar_date_picker.rs` and `week_grid` labels through `tr()`, with new `calendar.view.*` keys (en + de) in `app.yml`. Verify: `cargo test -p app i18n` (every key has en and de) and a German demo check.
 
 ## 5. Calendar list pane (calendar-sidebar)
 
-- [ ] 5.1 Extract the mini month into `views/calendar_mini_month.rs` and use it in the popover and the pane. It marks the visible range, follows navigation until moved by the user, and navigates on click. Verify: unit test of the visible-range marking, plus a demo check.
-- [ ] 5.2 Rebuild the pane:
+- [x] 5.1 Extract the mini month into `views/calendar_mini_month.rs` and use it in the popover and the pane. It marks the visible range, follows navigation until moved by the user, and navigates on click. Verify: unit test of the visible-range marking, plus a demo check.
+- [x] 5.2 Rebuild the pane:
   - "Calendar" heading;
   - mini month;
   - Add calendar opening Settings › Calendar;
