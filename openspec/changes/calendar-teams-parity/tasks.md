@@ -34,7 +34,7 @@
 
 ## 3. Scroll to work start (calendar-now-view)
 
-- [ ] 3.1 Add a work-start scroll offset helper in `calendar_now` (work start minus 30 minutes, clamped, hour height as a parameter). Generalise the scroll request so open, span change, navigation and date pick align to now when today is visible, otherwise to work start. Verify: `cargo test -p app-call-model calendar_now` plus a state test that `shift_calendar_week` requests alignment.
+- [x] 3.1 Add a work-start scroll offset helper in `calendar_now` (work start minus 30 minutes, clamped, hour height as a parameter). Generalise the scroll request so open, span change, navigation and date pick align to now when today is visible, otherwise to work start. Verify: `cargo test -p app-call-model calendar_now` plus a state test that `shift_calendar_week` requests alignment.
 
 ## 4. Grid look and strings (calendar-grid-layout)
 
