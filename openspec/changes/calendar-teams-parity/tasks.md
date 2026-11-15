@@ -66,13 +66,13 @@
 
 ## 6. Integration
 
-- [ ] 6.1 Run the full checks: `cargo fmt --check`, `cargo clippy --workspace --all-targets -- -D warnings`, `cargo test -p app-call-model -p app-state -p graph -p store -p app-base`, `cargo test -p app layout_guard`.
+- [x] 6.1 Run the full checks: `cargo fmt --check`, `cargo clippy --workspace --all-targets -- -D warnings`, `cargo test -p app-call-model -p app-state -p graph -p store -p app-base`, `cargo test -p app layout_guard`.
 - [ ] 6.2 Live check against the own account, with the same week in Teams web and the app in Week view:
   - the 16–20 November events appear;
   - work hours match the mailbox;
   - the diagnostics line shows the counts.
   Restore any changed mailbox setting afterwards.
-- [ ] 6.3 Update `ROADMAP.md` calendar rows.
+- [x] 6.3 Update `ROADMAP.md` calendar rows.
 
 ## Workflow follow-up
 

@@ -65,10 +65,7 @@ pub fn render(app: &Entity<AppState>, cx: &App) -> Div {
             &accounts,
             account,
             prefs.group_collapsed(&account.id),
-            state
-                .calendar_expanded_groups
-                .iter()
-                .any(|group| *group == account.id),
+            state.calendar_expanded_groups.contains(&account.id),
         ));
     }
     column
@@ -257,6 +254,7 @@ fn google_group(
                 )))
                 .pl(px(28.))
                 .h(px(ROW_HEIGHT))
+                .flex_none()
                 .flex()
                 .items_center()
                 .cursor_pointer()
@@ -289,6 +287,7 @@ fn group(
     v_flex().w_full().pt(px(6.)).child(
         h_flex()
             .h(px(ROW_HEIGHT))
+            .flex_none()
             .w_full()
             .items_center()
             .gap(px(6.))
@@ -390,6 +389,7 @@ fn check_box(check: GroupCheck, color: Hsla) -> Div {
                     .rounded_full()
                     .bg(theme::on_accent()),
             ),
-            GroupCheck::None => check_box.border_1().border_color(color),
+            // Lines stay soft: an empty box is a light fill of the calendar colour.
+            GroupCheck::None => check_box.bg(color.opacity(0.22)),
         })
 }
