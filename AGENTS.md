@@ -7,7 +7,8 @@ Required workflow (Cursor rule `.cursor/rules/fork-workflow.mdc`, `alwaysApply`)
 - **`origin`** (`forgejo.lan/devops-geek/rusty-teams`) = SoT; develop, push, tags, releases
 - **`github`** (`d0dg3r/rusty-teams`) = offsite mirror only. Never push, never open branches, never commit there. `git push github` is rejected by `.githooks/pre-push`
 - **`upstream`** (`danieldaeschle/rusty-teams`) = fetch + thin PRs only. Never `git push upstream`
-- Everyday commits and feature branches go to **`origin`** (Forgejo). Install the hook once per clone: `scripts/install-git-hooks.sh`. Do not pass `--no-verify`
+- Everyday commits and feature branches go to **`origin`** (Forgejo). Product branch is Forgejo **`main`** (OpenSpec, CI, releases). Install the hook once per clone: `scripts/install-git-hooks.sh`. Do not pass `--no-verify`
+- Upstream visibility: weekday Forgejo job `.forgejo/workflows/upstream-watch.yaml` opens/updates one issue when Upstream `main` is ahead; it never merges. Local check: `scripts/upstream-status.sh`. Sync consciously: `git fetch upstream && git merge upstream/main` into `main`, then push `origin`. Do not invent a second everyday product branch only for Upstream sync
 - Upstream PRs: branch from current `upstream/main`, one topic, **push the head to Forgejo first**, let the mirror copy it to GitHub, then `gh pr create` against `danieldaeschle/rusty-teams`
 - An `origin` push (including a merge to `main`) makes the Forgejo mirror **delete any GitHub branch that is not on Forgejo**, which closes the upstream PR (`head_ref_deleted`, actor often `d0dg3r`). The pre-push hook blocks that push until every open `d0dg3r` → upstream PR head exists on `origin`. Do not delete those heads while the PR is open. See `.cursor/rules/fork-workflow.mdc`
 - Releases: tags like `v0.3.0-joe.1` on Forgejo; GitHub gets the same assets via mirror (`GITHUB_RELEASE.md`)

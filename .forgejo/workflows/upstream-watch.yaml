@@ -1,0 +1,42 @@
+# Weekday Upstream watch: report when danieldaeschle/rusty-teams main is ahead
+# of Forgejo main. Opens or updates a single issue; never merges.
+# Quiet when already in sync (and closes leftover watch issues).
+
+name: Upstream watch
+
+on:
+  schedule:
+    # 08:00 Europe/Zurich winter (UTC+1) → 07:00 UTC; summer is 06:00 UTC.
+    - cron: "0 7 * * 1-5"
+  workflow_dispatch:
+
+concurrency:
+  group: upstream-watch
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  watch:
+    name: Compare Upstream
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout Forgejo main
+        uses: actions/checkout@v4
+        with:
+          # Need full history so merge-base / rev-list against Upstream is accurate.
+          fetch-depth: 0
+          ref: main
+
+      - name: Report Upstream ahead (issue, no merge)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_API_URL: ${{ github.api_url }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          chmod +x scripts/upstream-watch-ci.sh
+          ./scripts/upstream-watch-ci.sh

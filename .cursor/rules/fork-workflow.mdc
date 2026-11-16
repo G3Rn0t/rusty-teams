@@ -19,7 +19,8 @@ Dieses Repo ist Joes Produktlinie. Remotes und Rollen:
 - Dauerhafte SoT: Branch `main` (bzw. der aktuelle Integrationsbranch) auf Forgejo.
 - Entwickeln, Branches anlegen, reviewen und mergen passiert auf **Forgejo**. Der GitHub-Fork `d0dg3r/rusty-teams` ist kein Arbeitsort: kein `git push github`, kein Branch im GitHub-Web, kein Commit dort.
 - `gh` gegen `danieldaeschle/rusty-teams` nur für den Upstream-PR (anlegen, Review, Reopen). Der Head kommt vom Spiegel, nicht von einem lokalen Push auf `github`.
-- Upstream mitnehmen: `git fetch upstream`, dann `merge`/`rebase` von `upstream/main` in den lokalen Branch — Konflikte hier lösen.
+- Upstream mitnehmen: bewusst nach der Meldung (oder lokalem Check). `git fetch upstream`, dann `git merge upstream/main` in Forgejo-`main` — Konflikte hier lösen. Die Wache merged nie selbst.
+- Upstream-Sichtbarkeit: Werktags meldet `.forgejo/workflows/upstream-watch.yaml`, wenn `danieldaeschle/rusty-teams` `main` voraus ist (ein Issue «Upstream ahead:…»). Lokal: `scripts/upstream-status.sh`. Kein zweiter Alltag-/Produkt-Branch nur für Upstream-Sync.
 - Vor dem ersten Push in einem Klon: `scripts/install-git-hooks.sh`. Danach lehnt `.githooks/pre-push` Pushs auf `github` und `upstream` ab. `--no-verify` ist für diesen Hook nicht erlaubt.
 
 ## PRs an Upstream
@@ -59,3 +60,5 @@ Alltags-Feature-Branches der eigenen Linie liegen nur auf `origin`. Auf den Spie
 - Nach einem geschlossenen PR den Head nur auf GitHub neu anlegen und `gh pr reopen` — zuerst Forgejo
 - Riesen-PR mit vermischten Fork-Features an Daniel
 - Upstream-Tag-Namen für abweichenden Fork-Inhalt wiederverwenden
+- Zweiten Alltag-/Produkt-Branch (`development` o. Ä.) nur erfinden, damit Upstream «sichtbar» wird — dafür gibt es die Wache und `scripts/upstream-status.sh`
+- Upstream still in `main` auto-mergen lassen (Wache und Agenten merged nie ohne bewussten Sync)
