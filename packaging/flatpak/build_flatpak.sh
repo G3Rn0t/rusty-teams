@@ -13,7 +13,7 @@ source "$ROOT/packaging/common.sh"
 
 cd "$ROOT"
 
-for cmd in flatpak python3 curl appstreamcli; do
+for cmd in flatpak flatpak-builder python3 curl appstreamcli; do
   if ! command -v "$cmd" >/dev/null 2>&1; then
     echo "Missing $cmd" >&2
     exit 1
@@ -124,20 +124,13 @@ for key in ("TEAMS_GOOGLE_CLIENT_ID", "TEAMS_GOOGLE_CLIENT_SECRET"):
 dst.write_text(yaml.safe_dump(doc, sort_keys=False, allow_unicode=True), encoding="utf-8")
 PY
 
-echo "Ensuring Freedesktop 25.08 SDK + rust-stable + llvm21 + org.flatpak.Builder"
+echo "Ensuring Freedesktop 25.08 SDK + rust-stable + llvm21"
 flatpak remote-add --if-not-exists --user flathub https://flathub.org/repo/flathub.flatpakrepo
 flatpak install -y --user flathub \
   org.freedesktop.Platform//25.08 \
   org.freedesktop.Sdk//25.08 \
   org.freedesktop.Sdk.Extension.rust-stable//25.08 \
-  org.freedesktop.Sdk.Extension.llvm21//25.08 \
-  org.flatpak.Builder
-# Jammy host flatpak 1.12 rejects --socket=pipewire; Builder ships a current
-# flatpak-builder that accepts Runtime 25.08 finish-args.
-FLATPAK_BUILDER=(
-  flatpak run --user --filesystem=host --share=network --command=flatpak-builder
-  org.flatpak.Builder
-)
+  org.freedesktop.Sdk.Extension.llvm21//25.08
 
 rm -rf "$WORKDIR" "$REPO"
 mkdir -p "$REPO"
@@ -156,16 +149,16 @@ export GIT_CONFIG_COUNT=1
 export GIT_CONFIG_KEY_0=protocol.file.allow
 export GIT_CONFIG_VALUE_0=always
 
-echo "flatpak-builder via org.flatpak.Builder (SDK build)…"
+echo "flatpak-builder (SDK build)…"
 # crates.io / GitHub downloads occasionally die with GnuTLS recv errors; retry a few times.
-# Do not retry permanent finish/tooling errors (pipewire socket, compose, aws-lc flags).
+# Do not retry permanent finish/tooling errors (socket types, compose, aws-lc flags).
 attempts=3
 BUILD_LOG="$(mktemp)"
 for attempt in $(seq 1 "$attempts"); do
   set +e
   (
     cd "$FLATPAK_DIR"
-    "${FLATPAK_BUILDER[@]}" "${BUILDER_ARGS[@]}" "$WORKDIR" "$(basename "$RUNTIME_MANIFEST")"
+    flatpak-builder "${BUILDER_ARGS[@]}" "$WORKDIR" "$(basename "$RUNTIME_MANIFEST")"
   ) 2>&1 | tee "$BUILD_LOG"
   status=${PIPESTATUS[0]}
   set -e

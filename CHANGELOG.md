@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.4.0-joe.18] - 2026-11-16
+
+### Fixed
+
+- Flatpak CI installs `ppa:flatpak/stable` (flatpak 1.18) so export accepts
+  `--socket=pipewire`; nested `org.flatpak.Builder` cannot run under act
+  without D-Bus.
+
 ## [0.4.0-joe.17] - 2026-11-16
 
 ### Fixed

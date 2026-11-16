@@ -105,6 +105,11 @@ jobs:
       - name: Install Flatpak tools
         run: |
           set -euo pipefail
+          # Jammy archive flatpak 1.12 rejects --socket=pipewire; Flatpak PPA
+          # ships 1.18 + builder 1.4 which match Runtime 25.08 finish-args.
+          sudo apt-get update -y
+          sudo apt-get install --no-install-recommends -y software-properties-common
+          sudo add-apt-repository -y ppa:flatpak/stable
           sudo apt-get update -y
           sudo apt-get install --no-install-recommends -y \
             flatpak flatpak-builder appstream \
@@ -112,6 +117,8 @@ jobs:
             elfutils \
             python3 python3-pip python3-venv \
             curl ca-certificates jq
+          flatpak --version
+          flatpak-builder --version
           # Jammy apt tomlkit is too old for flatpak-cargo-generator (.unwrap).
           # PyPI hash mismatches = corrupted download; retry without cache.
           pip_ok=0
