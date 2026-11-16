@@ -8,7 +8,7 @@ The current Flatpak wraps a host-built binary, leaves Chrome outside the sandbox
 
 - Ship a committed Flatpak manifest that builds the app inside the Freedesktop SDK (Rust + LLVM extensions), with AppStream metainfo, a desktop file, and icons that match Flatpak conventions.
 - Bundle Google Chrome as Flatpak `extra-data` and launch it through zypak so Microsoft sign-in works inside the sandbox without host filesystem access or Flatseal overrides.
-- Set finish-args for network, Wayland/X11, PulseAudio, PipeWire, DRI, V4L2 (`--device=all`), notifications, StatusNotifier tray, and XDG Downloads so calls, screen share, toasts, tray, and file reveal work with the published defaults.
+- Set finish-args for network, Wayland/X11, PulseAudio, PipeWire (`--filesystem=xdg-run/pipewire-0`), DRI, V4L2 (`--device=all`), notifications, StatusNotifier tray, and XDG Downloads so calls, screen share, toasts, tray, and file reveal work with the published defaults.
 - When `FLATPAK_ID` is set, suppress the XDG self-install offer and GitHub self-update; use the Flatpak app id for notification and tray desktop-entry hints.
 - Split the Linux release workflow so Flatpak builds in its own job, validates with AppStream/desktop/lint checks, and fails the release if packaging fails (no best-effort skip).
 

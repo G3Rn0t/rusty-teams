@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0-joe.20] - 2026-11-16
+
+### Fixed
+
+- Flatpak finish-args use `--filesystem=xdg-run/pipewire-0` instead of the
+  non-existent `--socket=pipewire` (matches Flathub OBS/Discord).
+
 ## [0.4.0-joe.19] - 2026-11-16
 
 ### Fixed

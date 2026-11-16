@@ -47,7 +47,7 @@ Build constraints that shape the approach: `vendor/webrtc-sys` requires Clang �
 
 ### 4. Finish-args for product defaults
 
-**Choice:** Network, ipc, wayland, fallback-x11, dri, pulseaudio, pipewire, `xdg-download`, Notifications talk-name, StatusNotifierWatcher talk-name, StatusNotifierItem own-name wildcard, `--device=all` for V4L2 (documented; Flatpak has no narrower camera permission for `/dev/video*`).
+**Choice:** Network, ipc, wayland, fallback-x11, dri, pulseaudio, `xdg-download`, `--filesystem=xdg-run/pipewire-0` (PipeWire is not a `--socket=` type), Notifications talk-name, StatusNotifierWatcher talk-name, StatusNotifierItem own-name wildcard, `--device=all` for V4L2 (documented; Flatpak has no narrower camera permission for `/dev/video*`).
 
 **Why:** Matches what the app already does on a normal desktop session so the user does not open Flatseal.
 
@@ -73,7 +73,7 @@ Build constraints that shape the approach: `vendor/webrtc-sys` requires Clang �
 
 **AppStream compose:** The manifest sets `appstream-compose: false`. Jammy `flatpak-builder` 1.2 runs `appstream-compose` under bwrap; on act/Docker runners that fails with `execvp … No such file or directory` even when `appstream-util` is on the host. Metainfo is still installed into the app; `build_flatpak.sh` validates it with host `appstreamcli` before the build. Single-file `.flatpak` bundles do not need the OSTree AppStream branch that compose would write.
 
-**Builder host vs finish-args:** Jammy archive `flatpak` 1.12 rejects `--socket=pipewire`. The Flatpak CI job installs `ppa:flatpak/stable` (flatpak ≥ 1.18, flatpak-builder ≥ 1.4) so Runtime 25.08 finish-args including PipeWire export cleanly. Retries skip permanent finish/tooling errors. Nested `org.flatpak.Builder` was tried and rejected: act/Docker has no D-Bus for `flatpak run`.
+**Builder host:** CI installs `ppa:flatpak/stable` (flatpak ≥ 1.18, flatpak-builder ≥ 1.4) for current tooling on Jammy act runners. Retries skip permanent finish/tooling errors. Nested `org.flatpak.Builder` was tried and rejected: act/Docker has no D-Bus for `flatpak run`. PipeWire access is `--filesystem=xdg-run/pipewire-0`, not a socket type (flatpak has no `--socket=pipewire`).
 
 **Webrtc zip ownership:** PPA bubblewrap cannot `chown` archive members to uid 1001 inside the build user namespace. Extract with `bsdtar --no-same-owner`.
 

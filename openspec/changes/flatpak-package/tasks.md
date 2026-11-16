@@ -10,7 +10,7 @@
 ## 2. Flatpak packaging artifacts
 
 - [x] 2.1 Commit desktop file, AppStream metainfo, and icon wiring for `net.devops_geek.RustyTeams` under `packaging/flatpak/`; verify with `desktop-file-validate` and `appstreamcli validate` (or document CI equivalents)
-- [x] 2.2 Rewrite `packaging/flatpak/net.devops_geek.RustyTeams.yml` for SDK build, finish-args from the design, zypak module, Chrome `extra-data` + `/app/bin/google-chrome` wrapper, cargo sources, and `only-arches: [x86_64]`; verify the manifest parses (`flatpak-builder --show-deps` or dry-run) and finish-args include notifications, tray, pipewire, pulseaudio, and `--device=all`
+- [x] 2.2 Rewrite `packaging/flatpak/net.devops_geek.RustyTeams.yml` for SDK build, finish-args from the design, zypak module, Chrome `extra-data` + `/app/bin/google-chrome` wrapper, cargo sources, and `only-arches: [x86_64]`; verify the manifest parses (`flatpak-builder --show-deps` or dry-run) and finish-args include notifications, tray, `--filesystem=xdg-run/pipewire-0`, pulseaudio, and `--device=all`
 - [x] 2.3 Replace `packaging/flatpak/build_flatpak.sh` to generate cargo sources, run `flatpak-builder`, validate, and emit `dist/rusty-teams-<ver>-x86_64.flatpak`; verify the script fails loudly on missing tools and does not wrap a host binary by default
 - [x] 2.4 Add `iproute2` (or equivalent) into `/app` if the Platform lacks `ss`; verify managed Chrome kill path can locate a listener PID inside the sandbox, or confirm `ss` is present and skip the module
 - [x] 2.5 Jammy compatibility: rewrite metainfo on the host and inject Google OAuth via a temporary manifest `build-options.env` (no `flatpak-builder --env`); verify the script invokes builder without `--env=` flags
@@ -19,7 +19,7 @@
 - [x] 2.8 Retry `flatpak-builder` up to three times on transient network/download failures; verify a GnuTLS/crates.io blip does not fail the job on the first attempt only
 - [x] 2.9 Clear Flatpak SDK `CFLAGS`/`CXXFLAGS` for the rusty-teams module so `aws-lc-sys` jitterentropy builds with `-O0`; verify the build no longer fails with «must not be compiled with optimizations»
 - [x] 2.10 Set manifest `appstream-compose: false` and validate metainfo with host `appstreamcli`; verify finish no longer fails with `execvp appstream-compose: No such file or directory` on Jammy act runners
-- [x] 2.11 Install `ppa:flatpak/stable` on the Flatpak CI job (flatpak ≥ 1.18) so `--socket=pipewire` is accepted; do not retry permanent finish-args errors; verify export no longer fails with `Unknown socket type pipewire`
+- [x] 2.11 Install `ppa:flatpak/stable` on the Flatpak CI job (flatpak ≥ 1.18); replace invalid `--socket=pipewire` with `--filesystem=xdg-run/pipewire-0`; verify export no longer fails with `Unknown socket type pipewire`
 - [x] 2.12 Extract webrtc with `bsdtar --no-same-owner`; verify the build no longer fails with `Can't set user=1001` under PPA bubblewrap
 
 ## 3. Release CI and docs

@@ -21,10 +21,11 @@ finish-args:
   - --socket=fallback-x11
   - --socket=wayland
   - --socket=pulseaudio
-  - --socket=pipewire
   - --device=dri
   - --device=all
   - --filesystem=xdg-download
+  # PipeWire is not a flatpak --socket=*; Flathub apps use the runtime path.
+  - --filesystem=xdg-run/pipewire-0
   - --talk-name=org.freedesktop.Notifications
   - --talk-name=org.kde.StatusNotifierWatcher
   - --own-name=org.kde.StatusNotifierItem-*
