@@ -1715,21 +1715,39 @@ mod frames {
         found
     }
 
+    fn scroll_settings_body_to_end(visual: &mut VisualTestContext) {
+        let Some(body) = visual.debug_bounds(SETTINGS_BODY) else {
+            return;
+        };
+        visual.simulate_event(ScrollWheelEvent {
+            position: body.center(),
+            delta: ScrollDelta::Pixels(point(px(0.), px(-100_000.))),
+            ..Default::default()
+        });
+    }
+
     fn scrolled_inset_violation(visual: &mut VisualTestContext) -> Option<(String, String)> {
         let body = visual.debug_bounds(SETTINGS_BODY)?;
         let content = visual.debug_bounds(SETTINGS_CONTENT)?;
         if content.bottom() <= body.bottom() {
             return None;
         }
-        visual.simulate_event(ScrollWheelEvent {
-            position: body.center(),
-            delta: ScrollDelta::Pixels(point(px(0.), px(-100_000.))),
-            ..Default::default()
-        });
-        collect(visual, None);
-        let body = visual.debug_bounds(SETTINGS_BODY)?;
-        let content = visual.debug_bounds(SETTINGS_CONTENT)?;
-        inset_violation(&SCROLLED_INSET_RULE, body, content)
+        // The wheel clamps to the content size of that frame. A later grow
+        // (decoded image, conversation rebuild) leaves the offset short, so
+        // the bottom padding reads as a few pixels instead of the side inset.
+        // Scroll again only when the reading is uneven.
+        let mut violation = None;
+        for _ in 0..3 {
+            scroll_settings_body_to_end(visual);
+            collect(visual, None);
+            let body = visual.debug_bounds(SETTINGS_BODY)?;
+            let content = visual.debug_bounds(SETTINGS_CONTENT)?;
+            violation = inset_violation(&SCROLLED_INSET_RULE, body, content);
+            if violation.is_none() {
+                break;
+            }
+        }
+        violation
     }
 
     #[gpui_kit::test]
