@@ -57,36 +57,20 @@ impl StayAwake {
 
     #[cfg(not(windows))]
     pub fn new() -> Self {
-        // Die with the call process on Linux so a SIGSEGV does not leave a sleep infinity orphan.
-        let mut command = std::process::Command::new("systemd-inhibit");
-        command
+        // `cat` ends on EOF when this process dies, so a crash cannot leave the inhibitor behind.
+        let inhibitor = std::process::Command::new("systemd-inhibit")
             .args([
                 "--what=idle:sleep",
                 "--who=Rusty Teams",
                 &format!("--why={REASON}"),
                 "--mode=block",
-                "sleep",
-                "infinity",
+                "cat",
             ])
-            .stdin(std::process::Stdio::null())
+            .stdin(std::process::Stdio::piped())
             .stdout(std::process::Stdio::null())
-            .stderr(std::process::Stdio::null());
-        #[cfg(target_os = "linux")]
-        {
-            use std::os::unix::process::CommandExt;
-            // SAFETY: pre_exec runs in the child before exec; PR_SET_PDEATHSIG is process-local.
-            unsafe {
-                command.pre_exec(|| {
-                    // Fail spawn if PDEATHSIG cannot be armed — otherwise a crash can leave
-                    // `sleep infinity` orphaned under systemd-inhibit.
-                    if libc::prctl(libc::PR_SET_PDEATHSIG, libc::SIGTERM) != 0 {
-                        return Err(std::io::Error::last_os_error());
-                    }
-                    Ok(())
-                });
-            }
-        }
-        let inhibitor = command.spawn().ok();
+            .stderr(std::process::Stdio::null())
+            .spawn()
+            .ok();
         StayAwake { inhibitor }
     }
 

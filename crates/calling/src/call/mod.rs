@@ -329,6 +329,15 @@ pub enum AcceptMode {
     Video,
 }
 
+fn remember_call_leg(live: &mut Live, url: Option<&str>) {
+    let Some(url) = url.filter(|url| !url.is_empty()) else {
+        return;
+    };
+    if !live.call_legs.iter().any(|known| known == url) {
+        live.call_legs.push(url.to_owned());
+    }
+}
+
 fn advance(state: &mut CallState, signal: CallSignal, control: &CallControl) -> bool {
     let next = state.next(signal, std::time::Instant::now());
     if next == *state {
@@ -482,10 +491,6 @@ where
         Ok(result) => Ok(result?),
         Err(_) => Err(Error::Signaling("Teams did not answer in time".into())),
     }
-}
-
-fn far_future() -> Instant {
-    Instant::now() + FAR_FUTURE
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -927,7 +932,6 @@ async fn drive(
     let mut mic_settings = MicSettings::default();
     let mut audio_disabled = false;
     let mut remote_audio: Option<RtcAudioTrack> = None;
-    // sync_software_audio arms/disarms the capture hook from the outgoing track state.
     sync_software_audio(
         &factory,
         options,
@@ -1021,7 +1025,7 @@ async fn drive(
                 video.router().set(&mid, None);
                 control.send(CallUpdate::ScreenShare(None));
             }
-            // Detach local senders before closing — otherwise peer.close can hang
+            // Detach local senders before closing: otherwise peer.close can hang
             // while the camera/share capture threads still feed the old track.
             local_video.clear_lines();
             replace_leg_media_links(&mut media_links, &pending.leg_links);
@@ -1476,7 +1480,7 @@ async fn drive(
                             }
                             MediaAction::AnswerOnSamePeer => {
                                 // After a server escalation the follow-up offer matches the
-                                // pending peer's m-line order — never answer it on the old peer.
+                                // pending peer's m-line order: never answer it on the old peer.
                                 let on_pending = next.as_ref().is_some_and(|pending| pending.answered.is_some());
                                 let peer = if on_pending {
                                     &next.as_ref().unwrap().session.peer
@@ -2070,12 +2074,10 @@ async fn drive(
                 }
                 Some(CallCommand::SetMicSettings(settings)) if !audio_disabled => {
                     mic_settings = settings;
-                    // Let sync_software_audio be the single authority for hook arming.
                     sync_software_audio(&factory, options, &input, muted, remote_audio.clone(), &current.peer, &track, software_wanted(mic_settings, share_sound_wanted, &local_video, live.audio.as_ref()), false, &mut software_audio, mic_settings, control, timeline);
                 }
                 Some(CallCommand::SetMicSettings(settings)) => {
                     mic_settings = settings;
-                    // Audio is off both ways: prepare Auto if needed, keep the capture hook disarmed.
                     crate::noise_stage::apply_for_outgoing(mic_settings, false);
                 }
                 Some(CallCommand::SelectOutput(choice)) => {
@@ -2099,8 +2101,6 @@ async fn drive(
                 Some(CallCommand::SetCamera(on)) => {
                     let direct = layout == Layout::OneToOne && negotiator.path() != MediaPath::Mixer;
                     if on && next.is_some() {
-                        // Server escalation in flight: attach on the new peer after switch.
-                        // Only announce Camera(true) once so the UI is not flooded each loop.
                         let first = !start_camera_pending;
                         start_camera_pending = true;
                         if local_video.is_available()
@@ -2998,6 +2998,10 @@ async fn drive(
     }
     live.callbacks = Some(callbacks);
     Ok(())
+}
+
+fn far_future() -> Instant {
+    Instant::now() + FAR_FUTURE
 }
 
 #[cfg(test)]

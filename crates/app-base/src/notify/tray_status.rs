@@ -1,55 +1,7 @@
-//! Shared status labels for the tray menu. Keep in sync with
-//! `app-state::own_status::{choice_label, state_label, STATUS_CHOICES, STATUS_DURATIONS}`.
-
 use chatsvc::ForcedKind;
 
-use super::platform::TrayStatusDuration;
-
-pub const STATUS_CHOICES: [ForcedKind; 6] = [
-    ForcedKind::Available,
-    ForcedKind::Busy,
-    ForcedKind::DoNotDisturb,
-    ForcedKind::BeRightBack,
-    ForcedKind::Away,
-    ForcedKind::Offline,
-];
-
-pub const STATUS_DURATIONS: [TrayStatusDuration; 5] = [
-    TrayStatusDuration::HalfHour,
-    TrayStatusDuration::OneHour,
-    TrayStatusDuration::TwoHours,
-    TrayStatusDuration::Today,
-    TrayStatusDuration::ThisWeek,
-];
-
-pub fn choice_label(kind: ForcedKind) -> &'static str {
-    match kind {
-        ForcedKind::Away => "Appear away",
-        ForcedKind::Offline => "Appear offline",
-        other => state_label(other),
-    }
-}
-
-pub fn state_label(kind: ForcedKind) -> &'static str {
-    match kind {
-        ForcedKind::Available => "Available",
-        ForcedKind::Busy => "Busy",
-        ForcedKind::DoNotDisturb => "Do not disturb",
-        ForcedKind::BeRightBack => "Be right back",
-        ForcedKind::Away => "Away",
-        ForcedKind::Offline => "Offline",
-    }
-}
-
-pub fn duration_label(duration: TrayStatusDuration) -> &'static str {
-    match duration {
-        TrayStatusDuration::HalfHour => "30 minutes",
-        TrayStatusDuration::OneHour => "1 hour",
-        TrayStatusDuration::TwoHours => "2 hours",
-        TrayStatusDuration::Today => "Today",
-        TrayStatusDuration::ThisWeek => "This week",
-    }
-}
+use crate::status_choice::StatusDuration;
+pub use crate::status_choice::{STATUS_CHOICES, STATUS_DURATIONS, choice_label};
 
 pub fn duration_target(forced: Option<ForcedKind>) -> Option<ForcedKind> {
     forced.filter(|kind| *kind != ForcedKind::Available)
@@ -86,23 +38,23 @@ pub fn parse_kind_id(id: &str) -> Option<ForcedKind> {
     }
 }
 
-pub fn duration_id(duration: TrayStatusDuration) -> &'static str {
+pub fn duration_id(duration: StatusDuration) -> &'static str {
     match duration {
-        TrayStatusDuration::HalfHour => "status-duration:30m",
-        TrayStatusDuration::OneHour => "status-duration:1h",
-        TrayStatusDuration::TwoHours => "status-duration:2h",
-        TrayStatusDuration::Today => "status-duration:today",
-        TrayStatusDuration::ThisWeek => "status-duration:week",
+        StatusDuration::HalfHour => "status-duration:30m",
+        StatusDuration::OneHour => "status-duration:1h",
+        StatusDuration::TwoHours => "status-duration:2h",
+        StatusDuration::Today => "status-duration:today",
+        StatusDuration::ThisWeek => "status-duration:week",
     }
 }
 
-pub fn parse_duration_id(id: &str) -> Option<TrayStatusDuration> {
+pub fn parse_duration_id(id: &str) -> Option<StatusDuration> {
     match id {
-        "status-duration:30m" => Some(TrayStatusDuration::HalfHour),
-        "status-duration:1h" => Some(TrayStatusDuration::OneHour),
-        "status-duration:2h" => Some(TrayStatusDuration::TwoHours),
-        "status-duration:today" => Some(TrayStatusDuration::Today),
-        "status-duration:week" => Some(TrayStatusDuration::ThisWeek),
+        "status-duration:30m" => Some(StatusDuration::HalfHour),
+        "status-duration:1h" => Some(StatusDuration::OneHour),
+        "status-duration:2h" => Some(StatusDuration::TwoHours),
+        "status-duration:today" => Some(StatusDuration::Today),
+        "status-duration:week" => Some(StatusDuration::ThisWeek),
         _ => None,
     }
 }

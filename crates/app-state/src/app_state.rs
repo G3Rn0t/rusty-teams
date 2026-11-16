@@ -159,6 +159,7 @@ pub struct AppState {
     pub saved: SavedSet,
     pub call_history: Vec<teams_core::CallLogEntry>,
     pub calendar_events: Vec<chatsvc::CalendarEvent>,
+    pub calendar_event_peek_request: Option<chatsvc::CalendarEvent>,
     /// Authorize URL while Google OAuth waits on the loopback redirect.
     pub google_connect_pending: Option<String>,
     /// Bumped on cancel so a late loopback result is discarded.
@@ -178,7 +179,6 @@ pub struct AppState {
     pub own_time_zone_requested: bool,
     pub status_menu_open: bool,
     pub status_message_request: bool,
-    pub calendar_event_peek_request: Option<chatsvc::CalendarEvent>,
     pub profiles: ProfileCache,
     pub profile_request: Option<ProfileRequest>,
     pub call: Option<ActiveCall>,
@@ -336,6 +336,7 @@ impl AppState {
             saved: SavedSet::default(),
             call_history: Vec::new(),
             calendar_events: Vec::new(),
+            calendar_event_peek_request: None,
             google_connect_pending: None,
             google_connect_generation: 0,
             calendar_nudge: None,
@@ -353,7 +354,6 @@ impl AppState {
             own_time_zone_requested: false,
             status_menu_open: false,
             status_message_request: false,
-            calendar_event_peek_request: None,
             profiles: ProfileCache::new(),
             profile_request: None,
             call: None,

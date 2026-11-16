@@ -12,7 +12,6 @@ pub(super) struct StatsSnapshot {
     pub(super) local_level: f64,
     pub(super) echo_return_loss_enhancement: f64,
     pub(super) video: VideoReport,
-    /// Highest active camera encoder target bitrate (bps), excluding share mids.
     pub(super) camera_target_bitrate: u64,
     pub(super) share_inbound_packets: u64,
     pub(super) share_outbound_packets: u64,
@@ -28,20 +27,20 @@ pub(super) struct StatsSnapshot {
 
 #[derive(Debug, Default)]
 pub(super) struct ShareReceive {
-    frames_decoded: u32,
-    key_frames_decoded: u32,
-    width: u32,
-    height: u32,
-    frames_per_second: f64,
-    pli_count: u32,
-    fir_count: u32,
-    freeze_count: u32,
-    qp_sum: u64,
-    bytes_received: u64,
+    pub(super) frames_decoded: u32,
+    pub(super) key_frames_decoded: u32,
+    pub(super) width: u32,
+    pub(super) height: u32,
+    pub(super) frames_per_second: f64,
+    pub(super) pli_count: u32,
+    pub(super) fir_count: u32,
+    pub(super) freeze_count: u32,
+    pub(super) qp_sum: u64,
+    pub(super) bytes_received: u64,
 }
 
 impl ShareReceive {
-    fn average_qp(&self) -> u64 {
+    pub(super) fn average_qp(&self) -> u64 {
         self.qp_sum
             .checked_div(u64::from(self.frames_decoded))
             .unwrap_or(0)

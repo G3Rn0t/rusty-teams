@@ -277,8 +277,6 @@ pub fn acknowledgement_links(body: &Value) -> BTreeMap<String, String> {
     string_links(&body["callAcceptanceAcknowledgement"]["links"])
 }
 
-/// Link names that belong to a call leg. Other `links` objects in a payload
-/// (people, photos) must not overwrite these.
 const LEG_LINK_NAMES: &[&str] = &[
     "mediaAnswer",
     "rejection",

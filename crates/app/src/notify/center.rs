@@ -8,11 +8,17 @@ use store::Sidebar;
 use teams_core::{ForcedAvailability, ForcedKind};
 
 use super::badge::{Badge, badge_for};
+#[cfg(target_os = "linux")]
+use super::desktop_payload::{
+    self, DesktopKey, DesktopPayload, MeetingLabels, MessageLabels, RingLabels, action,
+};
 use super::incoming::IncomingTracker;
 use super::layout::{self, MEETING_HEIGHT, Slot, ring_height};
 use super::meeting_view::MeetingToastView;
+use super::platform::{self, NativeHandle, Tray, TrayCommand, TrayPresence, WorkArea};
+#[cfg(target_os = "linux")]
 use super::platform::{
-    self, NativeHandle, Tray, TrayCommand, TrayPresence, TrayStatusDuration, WorkArea,
+    BusNotification, DesktopNotifications, NotificationEvent, NotificationImage,
 };
 use super::ring_view::RingView;
 use super::rules::{
@@ -27,16 +33,7 @@ use super::stack::{
     AgentToast, AgentToastKind, FADE_IN, FAST_FADE, ReplyState, SENT_DURATION, SLOW_FADE,
     ToastModel, ToastStack,
 };
-#[cfg(any(target_os = "linux", target_os = "macos"))]
-use super::desktop_payload::{
-    self, DesktopKey, DesktopPayload, MeetingLabels, MessageLabels, RingLabels, action,
-};
-#[cfg(any(target_os = "linux", target_os = "macos"))]
-use super::platform::{
-    BusNotification, DesktopNotifications, NotificationEvent, NotificationImage,
-};
 use super::taskbar::taskbar_badge_count;
-#[cfg(not(any(target_os = "linux", target_os = "macos")))]
 use super::text::describe;
 use super::toast::{PillView, ToastView};
 use super::urgent_repeat::UrgentRepeats;
@@ -50,7 +47,7 @@ use crate::appearance::AppIcon;
 use crate::autostart::{self, StartupSettings};
 use crate::call::DemoScene;
 use crate::data::{self, Directory, PresenceKind};
-use crate::own_status::{self, StatusDuration};
+use crate::own_status;
 use crate::runtime;
 use crate::settings_section::SettingsSection;
 use crate::single_instance;
@@ -118,15 +115,15 @@ pub struct NotificationCenter {
     hover_hold: bool,
     unread_mentions: HashSet<String>,
     tray: Option<Tray>,
-    /// Last presence pushed to the tray; skip `sync_tray` when unchanged.
-    last_tray_presence: Option<TrayPresence>,
-    #[cfg(any(target_os = "linux", target_os = "macos"))]
+    #[cfg(target_os = "linux")]
     desktop: Option<DesktopNotifications>,
-    /// Logical keys to CloseNotification on the next desktop sync (dismiss / open / ring gone).
-    #[cfg(any(target_os = "linux", target_os = "macos"))]
+    #[cfg(target_os = "linux")]
     desktop_close: Vec<String>,
-    #[cfg(any(target_os = "linux", target_os = "macos"))]
+    #[cfg(target_os = "linux")]
     desktop_published: HashSet<String>,
+    #[cfg(target_os = "linux")]
+    desktop_avatar_cache: HashMap<String, (u64, NotificationImage)>,
+    last_tray_presence: Option<TrayPresence>,
     app_icon: AppIcon,
     shown_badge: Option<Badge>,
     shown_mention_dot: bool,
@@ -209,17 +206,19 @@ impl NotificationCenter {
             hover_hold: false,
             unread_mentions: HashSet::new(),
             tray,
-            last_tray_presence,
-            #[cfg(any(target_os = "linux", target_os = "macos"))]
+            #[cfg(target_os = "linux")]
             desktop: if app.read(cx).mode.demo {
                 None
             } else {
                 DesktopNotifications::start()
             },
-            #[cfg(any(target_os = "linux", target_os = "macos"))]
+            #[cfg(target_os = "linux")]
             desktop_close: Vec::new(),
-            #[cfg(any(target_os = "linux", target_os = "macos"))]
+            #[cfg(target_os = "linux")]
             desktop_published: HashSet::new(),
+            #[cfg(target_os = "linux")]
+            desktop_avatar_cache: HashMap::new(),
+            last_tray_presence,
             app_icon,
             shown_badge: None,
             shown_mention_dot: false,
@@ -359,7 +358,7 @@ impl NotificationCenter {
     pub fn start_in_background(&self, window: &mut Window, cx: &mut App) {
         match (&self.tray, self.main_native) {
             (Some(_), Some(native)) => platform::hide_window(native),
-            #[cfg(any(target_os = "linux", target_os = "macos"))]
+            #[cfg(target_os = "linux")]
             (Some(_), None) => crate::main_window::hide(cx),
             _ => window.minimize_window(),
         }
@@ -374,7 +373,7 @@ impl NotificationCenter {
                 platform::hide_window(native);
                 true
             }
-            #[cfg(any(target_os = "linux", target_os = "macos"))]
+            #[cfg(target_os = "linux")]
             (true, Some(_), None) => {
                 crate::main_window::mark_hiding(cx);
                 false
@@ -813,64 +812,59 @@ impl NotificationCenter {
     }
 
     fn sync_windows(&mut self, cx: &mut Context<Self>) {
-        #[cfg(any(target_os = "linux", target_os = "macos"))]
-        {
-            self.poll_desktop(cx);
+        #[cfg(target_os = "linux")]
+        if self.desktop.is_some() {
             self.sync_desktop(cx);
             return;
         }
-        #[cfg(not(any(target_os = "linux", target_os = "macos")))]
-        {
-            let visible = self.visible_ids();
-            let stale: Vec<u64> = self
-                .windows
-                .keys()
-                .filter(|id| !visible.contains(id))
-                .copied()
-                .collect();
-            for id in stale {
-                self.close_window(id, cx);
-            }
-            let call_toasts = self.call_toasts(cx);
-            let stale_call_toasts: Vec<CallToast> = self
-                .call_windows
-                .keys()
-                .filter(|key| !call_toasts.iter().any(|(toast, _)| toast == *key))
-                .copied()
-                .collect();
-            for key in stale_call_toasts {
-                self.close_call_window(key, cx);
-            }
-            let area = self.work_area(cx);
-            let mut heights: Vec<f32> = self
-                .stack
-                .visible()
-                .iter()
-                .map(|toast| {
-                    let lines = match &toast.agent {
-                        Some(agent) => wrapped_lines(&agent.body, layout::AGENT_BODY_WIDTH, cx),
-                        None => preview_lines(
-                            &describe(toast, shows_preview(&self.settings)).preview,
-                            cx,
-                        ),
-                    };
-                    layout::toast_height(toast, lines)
-                })
-                .collect();
-            heights.extend(call_toasts.iter().map(|(_, height)| *height));
-            let with_hide_all = visible.len() > 1 || self.stack.queued_count() > 0;
-            let slots = layout::stack_slots(area, self.settings.corner, &heights, with_hide_all);
-            for (id, slot) in visible.iter().zip(slots.toasts.iter()) {
-                self.place_toast(*id, *slot, area, cx);
-            }
-            for ((key, _), slot) in call_toasts
-                .iter()
-                .zip(slots.toasts.iter().skip(visible.len()))
-            {
-                self.place_call_toast(*key, *slot, area, cx);
-            }
-            self.sync_pill(slots.pill, area, cx);
+        let visible = self.visible_ids();
+        let stale: Vec<u64> = self
+            .windows
+            .keys()
+            .filter(|id| !visible.contains(id))
+            .copied()
+            .collect();
+        for id in stale {
+            self.close_window(id, cx);
         }
+        let call_toasts = self.call_toasts(cx);
+        let stale_call_toasts: Vec<CallToast> = self
+            .call_windows
+            .keys()
+            .filter(|key| !call_toasts.iter().any(|(toast, _)| toast == *key))
+            .copied()
+            .collect();
+        for key in stale_call_toasts {
+            self.close_call_window(key, cx);
+        }
+        let area = self.work_area(cx);
+        let mut heights: Vec<f32> = self
+            .stack
+            .visible()
+            .iter()
+            .map(|toast| {
+                let lines = match &toast.agent {
+                    Some(agent) => wrapped_lines(&agent.body, layout::AGENT_BODY_WIDTH, cx),
+                    None => {
+                        preview_lines(&describe(toast, shows_preview(&self.settings)).preview, cx)
+                    }
+                };
+                layout::toast_height(toast, lines)
+            })
+            .collect();
+        heights.extend(call_toasts.iter().map(|(_, height)| *height));
+        let with_hide_all = visible.len() > 1 || self.stack.queued_count() > 0;
+        let slots = layout::stack_slots(area, self.settings.corner, &heights, with_hide_all);
+        for (id, slot) in visible.iter().zip(slots.toasts.iter()) {
+            self.place_toast(*id, *slot, area, cx);
+        }
+        for ((key, _), slot) in call_toasts
+            .iter()
+            .zip(slots.toasts.iter().skip(visible.len()))
+        {
+            self.place_call_toast(*key, *slot, area, cx);
+        }
+        self.sync_pill(slots.pill, area, cx);
     }
 
     fn place_call_toast(
@@ -1100,7 +1094,7 @@ impl NotificationCenter {
     }
 
     fn drop_toast(&mut self, id: u64, cx: &mut Context<Self>) {
-        #[cfg(any(target_os = "linux", target_os = "macos"))]
+        #[cfg(target_os = "linux")]
         self.queue_desktop_close(DesktopKey::Message(id));
         let fast = self.animated(FAST_FADE);
         self.stack.dismiss(id, Instant::now(), fast);
@@ -1173,17 +1167,26 @@ impl NotificationCenter {
             || !self.call_windows.is_empty()
             || self.app.read(cx).rings.is_ringing()
             || !self.app.read(cx).meeting_toasts.is_empty();
-        #[cfg(any(target_os = "linux", target_os = "macos"))]
-        let needs_sync = needs_sync
-            || !self.desktop_close.is_empty()
-            || !self.desktop_published.is_empty();
+        #[cfg(target_os = "linux")]
+        let needs_sync =
+            needs_sync || !self.desktop_close.is_empty() || !self.desktop_published.is_empty();
+        #[cfg(target_os = "linux")]
+        if self
+            .desktop
+            .as_ref()
+            .is_some_and(DesktopNotifications::failed)
+        {
+            self.desktop = None;
+            self.desktop_published.clear();
+        }
+        // Poll desktop actions before sync so dismiss/reply land in the same tick.
+        #[cfg(target_os = "linux")]
+        if self.desktop.is_some() {
+            self.poll_desktop(cx);
+        }
         if needs_sync {
             self.sync_windows(cx);
             cx.notify();
-        }
-        #[cfg(any(target_os = "linux", target_os = "macos"))]
-        if self.desktop.is_some() {
-            self.poll_desktop(cx);
         }
         self.poll_tray(cx);
         if single_instance::take_activation() {
@@ -1222,12 +1225,12 @@ impl NotificationCenter {
         }
     }
 
-    #[cfg(any(target_os = "linux", target_os = "macos"))]
+    #[cfg(target_os = "linux")]
     fn queue_desktop_close(&mut self, key: DesktopKey) {
         self.desktop_close.push(key.replace_token());
     }
 
-    #[cfg(any(target_os = "linux", target_os = "macos"))]
+    #[cfg(target_os = "linux")]
     fn message_labels() -> MessageLabels {
         MessageLabels {
             mark_read: crate::i18n::tr("notify.mark_read"),
@@ -1235,7 +1238,7 @@ impl NotificationCenter {
         }
     }
 
-    #[cfg(any(target_os = "linux", target_os = "macos"))]
+    #[cfg(target_os = "linux")]
     fn ring_labels() -> RingLabels {
         RingLabels {
             decline: crate::i18n::tr("notify.decline"),
@@ -1245,7 +1248,7 @@ impl NotificationCenter {
         }
     }
 
-    #[cfg(any(target_os = "linux", target_os = "macos"))]
+    #[cfg(target_os = "linux")]
     fn meeting_labels() -> MeetingLabels {
         MeetingLabels {
             join: crate::i18n::tr("notify.join"),
@@ -1253,7 +1256,7 @@ impl NotificationCenter {
         }
     }
 
-    #[cfg(any(target_os = "linux", target_os = "macos"))]
+    #[cfg(target_os = "linux")]
     fn to_bus(payload: DesktopPayload, image: Option<NotificationImage>) -> BusNotification {
         BusNotification {
             logical_key: payload.key.replace_token(),
@@ -1272,81 +1275,130 @@ impl NotificationCenter {
         }
     }
 
-    #[cfg(any(target_os = "linux", target_os = "macos"))]
-    fn avatar_notification_image(state: &AppState, user_id: Option<&str>) -> Option<NotificationImage> {
+    #[cfg(target_os = "linux")]
+    fn avatar_notification_image(
+        &mut self,
+        state: &AppState,
+        user_id: Option<&str>,
+    ) -> Option<NotificationImage> {
         use crate::data::AvatarState;
         use image::imageops::FilterType;
+        use std::collections::hash_map::DefaultHasher;
+        use std::hash::{Hash, Hasher};
 
         let user_id = user_id?;
         let AvatarState::Ready(photo) = state.directory.avatar(user_id)? else {
             return None;
         };
-        let decoded = image::load_from_memory(photo.source_bytes()).ok()?;
+        let bytes = photo.source_bytes();
+        let mut hasher = DefaultHasher::new();
+        bytes.hash(&mut hasher);
+        let fingerprint = hasher.finish();
+        if let Some((cached_fp, image)) = self.desktop_avatar_cache.get(user_id)
+            && *cached_fp == fingerprint
+        {
+            return Some(image.clone());
+        }
+        let decoded = image::load_from_memory(bytes).ok()?;
         let rgba = decoded
             .resize_exact(64, 64, FilterType::Lanczos3)
             .into_rgba8();
-        Some(NotificationImage {
+        let image = NotificationImage {
             width: rgba.width(),
             height: rgba.height(),
             rgba: rgba.into_raw(),
-        })
+        };
+        self.desktop_avatar_cache
+            .insert(user_id.to_owned(), (fingerprint, image.clone()));
+        Some(image)
     }
 
-    #[cfg(any(target_os = "linux", target_os = "macos"))]
+    #[cfg(target_os = "linux")]
     fn sync_desktop(&mut self, cx: &mut Context<Self>) {
-        let Some(desktop) = &self.desktop else {
+        if self.desktop.is_none() {
             return;
-        };
+        }
         let preview_on = shows_preview(&self.settings);
         let message_labels = Self::message_labels();
         let ring_labels = Self::ring_labels();
         let meeting_labels = Self::meeting_labels();
-        let state = self.app.read(cx);
         let mut visible = Vec::new();
         let mut visible_logical = HashSet::new();
-        for toast in self.stack.visible() {
-            let image = Self::avatar_notification_image(state, toast.sender_id.as_deref());
+        let mut used_avatars = HashSet::new();
+        let message_toasts: Vec<_> = self.stack.visible().to_vec();
+        let (ring_payloads, meeting_payloads) = {
+            let state = self.app.read(cx);
+            let rings: Vec<_> = state
+                .rings
+                .ringing()
+                .map(|entry| {
+                    (
+                        desktop_payload::ring_payload(
+                            entry.ring.ring_id,
+                            entry.caller_name(),
+                            entry.subtitle(),
+                            entry.ring.video,
+                            &ring_labels,
+                        ),
+                        entry.caller_user_id(),
+                    )
+                })
+                .collect();
+            let now = Utc::now();
+            let offset = Local::now().offset().fix();
+            let meetings: Vec<_> = state
+                .meeting_toasts
+                .entries()
+                .iter()
+                .map(|toast| {
+                    let body = crate::call::meeting_subtitle(toast, now, offset);
+                    desktop_payload::meeting_payload(toast, &body, &meeting_labels)
+                })
+                .collect();
+            (rings, meetings)
+        };
+        for toast in &message_toasts {
+            if let Some(user_id) = toast.sender_id.as_deref() {
+                used_avatars.insert(user_id.to_owned());
+            }
+            let image =
+                self.avatar_notification_image(self.app.read(cx), toast.sender_id.as_deref());
             let payload = desktop_payload::message_payload(toast, preview_on, &message_labels);
             visible_logical.insert(payload.key.replace_token());
             visible.push(Self::to_bus(payload, image));
         }
-        for entry in state.rings.ringing() {
-            let payload = desktop_payload::ring_payload(
-                entry.ring.ring_id,
-                entry.caller_name(),
-                entry.subtitle(),
-                entry.ring.video,
-                &ring_labels,
-            );
-            let image = Self::avatar_notification_image(state, entry.caller_user_id().as_deref());
+        for (payload, caller_id) in ring_payloads {
+            if let Some(user_id) = caller_id.as_deref() {
+                used_avatars.insert(user_id.to_owned());
+            }
+            let image = self.avatar_notification_image(self.app.read(cx), caller_id.as_deref());
             visible_logical.insert(payload.key.replace_token());
             visible.push(Self::to_bus(payload, image));
         }
-        let now = Utc::now();
-        let offset = Local::now().offset().fix();
-        for toast in state.meeting_toasts.entries() {
-            let body = crate::call::meeting_subtitle(toast, now, offset);
-            let payload = desktop_payload::meeting_payload(toast, &body, &meeting_labels);
+        for payload in meeting_payloads {
             visible_logical.insert(payload.key.replace_token());
             visible.push(Self::to_bus(payload, None));
         }
+        self.desktop_avatar_cache
+            .retain(|user_id, _| used_avatars.contains(user_id));
         let mut close = std::mem::take(&mut self.desktop_close);
         for previous in &self.desktop_published {
             if visible_logical.contains(previous) {
                 continue;
             }
-            // Rings and meetings must leave the shell when the call/reminder ends.
             if previous.starts_with("ring:") || previous.starts_with("meeting:") {
                 close.push(previous.clone());
             }
         }
         close.sort();
         close.dedup();
-        desktop.sync(visible, close);
+        if let Some(desktop) = &self.desktop {
+            desktop.sync(visible, close);
+        }
         self.desktop_published = visible_logical;
     }
 
-    #[cfg(any(target_os = "linux", target_os = "macos"))]
+    #[cfg(target_os = "linux")]
     fn poll_desktop(&mut self, cx: &mut Context<Self>) {
         let Some(desktop) = &self.desktop else {
             return;
@@ -1367,21 +1419,24 @@ impl NotificationCenter {
                     logical_key,
                     reason,
                 } => {
-                    // Reason 2 = dismissed by the user in the shell.
-                    if reason == 2
+                    if reason == CLOSED_BY_USER
                         && let Some(DesktopKey::Meeting(toast_id)) = parse_logical_key(&logical_key)
                     {
-                        self.app.update(cx, |state, cx| {
-                            state.dismiss_meeting_toast(toast_id, cx)
-                        });
+                        self.app
+                            .update(cx, |state, cx| state.dismiss_meeting_toast(toast_id, cx));
                     }
                 }
             }
         }
     }
 
-    #[cfg(any(target_os = "linux", target_os = "macos"))]
-    fn handle_desktop_action(&mut self, logical_key: &str, action_id: &str, cx: &mut Context<Self>) {
+    #[cfg(target_os = "linux")]
+    fn handle_desktop_action(
+        &mut self,
+        logical_key: &str,
+        action_id: &str,
+        cx: &mut Context<Self>,
+    ) {
         let Some(key) = parse_logical_key(logical_key) else {
             return;
         };
@@ -1450,7 +1505,7 @@ impl NotificationCenter {
                     };
                     let forced = ForcedAvailability {
                         kind,
-                        expires_at: Some(tray_duration(duration).expires_at(Local::now())),
+                        expires_at: Some(duration.expires_at(Local::now())),
                     };
                     self.app
                         .update(cx, |state, cx| state.set_own_availability(Some(forced), cx));
@@ -1477,7 +1532,7 @@ impl NotificationCenter {
             if let Some(native) = self.main_native {
                 platform::hide_window(native);
             } else {
-                #[cfg(any(target_os = "linux", target_os = "macos"))]
+                #[cfg(target_os = "linux")]
                 crate::main_window::hide(cx);
             }
         } else {
@@ -1492,7 +1547,7 @@ impl NotificationCenter {
     }
 
     fn raise_main_window(&mut self, cx: &mut Context<Self>) {
-        #[cfg(any(target_os = "linux", target_os = "macos"))]
+        #[cfg(target_os = "linux")]
         if crate::main_window::is_hidden(cx) {
             crate::main_window::show(cx);
             return;
@@ -1826,16 +1881,6 @@ fn tray_presence_from(state: &AppState, mention: bool) -> TrayPresence {
     )
 }
 
-fn tray_duration(duration: TrayStatusDuration) -> StatusDuration {
-    match duration {
-        TrayStatusDuration::HalfHour => StatusDuration::HalfHour,
-        TrayStatusDuration::OneHour => StatusDuration::OneHour,
-        TrayStatusDuration::TwoHours => StatusDuration::TwoHours,
-        TrayStatusDuration::Today => StatusDuration::Today,
-        TrayStatusDuration::ThisWeek => StatusDuration::ThisWeek,
-    }
-}
-
 fn sync_loop(handle: &mut Option<SoundHandle>, audible: bool, tone: CallTone, cx: &App) {
     match (audible, handle.is_some()) {
         (true, false) => *handle = Some(sound_cache::start(tone.file_name(), true, cx)),
@@ -1882,7 +1927,10 @@ fn wrapped_lines(text: &str, width: f32, cx: &App) -> usize {
         .sum()
 }
 
-#[cfg(any(target_os = "linux", target_os = "macos"))]
+#[cfg(target_os = "linux")]
+const CLOSED_BY_USER: u32 = 2;
+
+#[cfg(target_os = "linux")]
 fn parse_logical_key(key: &str) -> Option<DesktopKey> {
     let (kind, id) = key.split_once(':')?;
     let id = id.parse().ok()?;

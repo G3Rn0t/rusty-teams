@@ -1,33 +1,15 @@
 use super::*;
 
-const SHARE_THUMBNAIL_WINDOWS: usize = 12;
-const SHARE_THUMBNAIL_WIDTH: u32 = 320;
-const SHARE_THUMBNAIL_HEIGHT: u32 = 180;
-
 pub(super) struct NextPeer {
     pub(super) session: PeerSession,
     pub(super) offered: Option<OfferedMedia>,
-    /// Set when the mixer sent the escalation offer and we answered on a fresh peer.
     pub(super) answered: Option<AnsweredMedia>,
-    /// Mixer links from the renegotiation that created this peer (replace stale leg URLs on switch).
     pub(super) leg_links: BTreeMap<String, String>,
-    /// Remote audio that arrived on this peer before the switch.
     pub(super) remote_audio: Option<RtcAudioTrack>,
     pub(super) reply_tags: Vec<String>,
     pub(super) deadline: Option<Instant>,
     pub(super) connected: bool,
     pub(super) retargeted: bool,
-}
-
-/// Merge links from the answering leg. Renegotiation usually only carries
-/// `mediaAnswer`/`rejection` — keep existing `updateMediaDescriptions` /
-/// `applyChannelParameters` / `controlVideoStreaming` unless the new map
-/// actually replaces them (a wipe left camera send + remote receive dead).
-pub(super) fn replace_leg_media_links(
-    media_links: &mut BTreeMap<String, String>,
-    leg_links: &BTreeMap<String, String>,
-) {
-    media_links.extend(leg_links.clone());
 }
 
 pub(super) async fn next_peer_event(next: &mut Option<NextPeer>) -> Option<PeerEvent> {
@@ -41,8 +23,7 @@ pub(super) fn video_possible(remote_set: bool, layout: Layout, path: MediaPath) 
     remote_set && !(layout == Layout::OneToOne && path == MediaPath::Mixer)
 }
 
-/// Camera/share may start only after the pending peer has replaced the old one.
-/// Re-queuing while `next` is set spins the call task (defer → pending → defer…).
+/// Re-queuing while `next` is set spins the call task (defer -> pending -> defer...).
 pub(super) fn camera_may_start(pending: bool, next_is_some: bool, possible: bool) -> bool {
     pending && !next_is_some && possible
 }
@@ -291,12 +272,6 @@ pub(super) fn negotiate_video_lines(
     send_receive_change(control, video.reselect(roster));
 }
 
-pub(super) fn send_receive_change(control: &CallControl, change: ReceiveChange) {
-    if let Some(sharer) = change.screen_sharer {
-        control.send(CallUpdate::ScreenShare(sharer));
-    }
-}
-
 pub(super) fn tell_bound_camera(
     remote: &RemoteCall,
     links: &BTreeMap<String, String>,
@@ -338,36 +313,7 @@ pub(super) fn tell_bound_share(
     );
 }
 
-pub(super) fn tell_media_descriptions(
-    remote: &RemoteCall,
-    links: &BTreeMap<String, String>,
-    description: MediaDescription,
-    request_id: &mut u32,
-    timeline: &Timeline,
-) {
-    let Some(url) = links.get("updateMediaDescriptions").cloned() else {
-        timeline.record("updateMediaDescriptions skipped", "no link from the mixer");
-        return;
-    };
-    *request_id += 1;
-    let request_id = *request_id;
-    let signaling = remote.signaling.clone();
-    let timeline = timeline.clone();
-    tokio::spawn(async move {
-        let sent = format!(
-            "{} {} request {request_id}",
-            description.mid, description.direction
-        );
-        if let Err(error) = signaling
-            .update_media_descriptions(&url, &[description], request_id)
-            .await
-        {
-            timeline.record("updateMediaDescriptions failed", format!("{sent}: {error}"));
-        }
-    });
-}
-
-async fn camera_devices(mode: VideoMode) -> Vec<CameraDevice> {
+pub(super) async fn camera_devices(mode: VideoMode) -> Vec<CameraDevice> {
     match mode {
         VideoMode::Pattern => vec![CameraDevice {
             key: "pattern".into(),
@@ -399,6 +345,12 @@ pub(super) fn refresh_cameras(
         let _ = updates.send(CallUpdate::Cameras(cameras));
     });
 }
+
+pub(super) const SHARE_THUMBNAIL_WINDOWS: usize = 12;
+
+pub(super) const SHARE_THUMBNAIL_WIDTH: u32 = 320;
+
+pub(super) const SHARE_THUMBNAIL_HEIGHT: u32 = 180;
 
 pub(super) fn announce_share(control: &CallControl, source: &ShareSource) {
     control.send(CallUpdate::ShareKind(Some(source.kind)));
@@ -486,6 +438,35 @@ pub(super) fn refresh_share_sources(
     });
 }
 
+pub(super) fn tell_media_descriptions(
+    remote: &RemoteCall,
+    links: &BTreeMap<String, String>,
+    description: MediaDescription,
+    request_id: &mut u32,
+    timeline: &Timeline,
+) {
+    let Some(url) = links.get("updateMediaDescriptions").cloned() else {
+        timeline.record("updateMediaDescriptions skipped", "no link from the mixer");
+        return;
+    };
+    *request_id += 1;
+    let request_id = *request_id;
+    let signaling = remote.signaling.clone();
+    let timeline = timeline.clone();
+    tokio::spawn(async move {
+        let sent = format!(
+            "{} {} request {request_id}",
+            description.mid, description.direction
+        );
+        if let Err(error) = signaling
+            .update_media_descriptions(&url, &[description], request_id)
+            .await
+        {
+            timeline.record("updateMediaDescriptions failed", format!("{sent}: {error}"));
+        }
+    });
+}
+
 pub(super) fn attach_share_line(
     peer: &PeerConnection,
     factory: &PeerConnectionFactory,
@@ -530,28 +511,6 @@ pub(super) fn start_camera_line(
         })?;
     }
     local_video.start_camera(choice)
-}
-
-pub(super) async fn apply_background(
-    choice: BackgroundChoice,
-    local_video: &LocalVideo,
-    control: &CallControl,
-    timeline: &Timeline,
-) {
-    match choice {
-        BackgroundChoice::None => local_video.set_background(false, None),
-        BackgroundChoice::Blur => local_video.set_background(true, None),
-        BackgroundChoice::Image(path) => {
-            match tokio::task::spawn_blocking(move || BackgroundPicture::load(&path)).await {
-                Ok(Ok(picture)) => local_video.set_background(true, Some(Arc::new(picture))),
-                Ok(Err(error)) => {
-                    timeline.record("background image failed", error.to_string());
-                    control.send(CallUpdate::Notice(BACKGROUND_IMAGE_FAILED_NOTICE.into()));
-                }
-                Err(_) => {}
-            }
-        }
-    }
 }
 
 pub(super) fn defer_to_new_peer(
@@ -617,5 +576,33 @@ pub(super) fn undo_change(change: Change, local_video: &mut LocalVideo, control:
         }
         Change::Share(false) => {}
         Change::Hold(_) => control.send(CallUpdate::Notice(HOLD_CHANGE_FAILED_NOTICE.into())),
+    }
+}
+
+pub(super) async fn apply_background(
+    choice: BackgroundChoice,
+    local_video: &LocalVideo,
+    control: &CallControl,
+    timeline: &Timeline,
+) {
+    match choice {
+        BackgroundChoice::None => local_video.set_background(false, None),
+        BackgroundChoice::Blur => local_video.set_background(true, None),
+        BackgroundChoice::Image(path) => {
+            match tokio::task::spawn_blocking(move || BackgroundPicture::load(&path)).await {
+                Ok(Ok(picture)) => local_video.set_background(true, Some(Arc::new(picture))),
+                Ok(Err(error)) => {
+                    timeline.record("background image failed", error.to_string());
+                    control.send(CallUpdate::Notice(BACKGROUND_IMAGE_FAILED_NOTICE.into()));
+                }
+                Err(_) => {}
+            }
+        }
+    }
+}
+
+pub(super) fn send_receive_change(control: &CallControl, change: ReceiveChange) {
+    if let Some(sharer) = change.screen_sharer {
+        control.send(CallUpdate::ScreenShare(sharer));
     }
 }

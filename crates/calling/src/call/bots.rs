@@ -1,8 +1,5 @@
 use super::*;
 
-const RECORDING_STOP_RETRIES: usize = 6;
-const RECORDING_STOP_RETRY_WAIT: Duration = Duration::from_secs(5);
-
 pub(super) fn is_own_meeting(own: Option<&MeetingTarget>, target: &MeetingTarget) -> bool {
     own.is_some_and(|own| own.thread_id == target.thread_id)
 }
@@ -30,6 +27,10 @@ pub(super) fn target_of<'a>(roster: &'a Roster, mri: &'a str) -> Target<'a> {
         .map_or("", |member| member.display_name.as_str());
     Target { mri, display_name }
 }
+
+pub(super) const RECORDING_STOP_RETRIES: usize = 6;
+
+pub(super) const RECORDING_STOP_RETRY_WAIT: Duration = Duration::from_secs(5);
 
 /// The recorder answers 409 to a stop sent while its start is still settling.
 pub(super) fn recorder_busy(error: &Error) -> bool {

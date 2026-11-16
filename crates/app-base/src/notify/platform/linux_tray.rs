@@ -67,9 +67,7 @@ fn status_submenu(item: &Item) -> MenuItem<Item> {
             CheckmarkItem {
                 label: menu_label(label),
                 checked: item.forced == Some(kind),
-                activate: Box::new(move |item: &mut Item| {
-                    item.send(TrayCommand::SetStatus(kind))
-                }),
+                activate: Box::new(move |item: &mut Item| item.send(TrayCommand::SetStatus(kind))),
                 ..Default::default()
             }
             .into(),
@@ -81,7 +79,7 @@ fn status_submenu(item: &Item) -> MenuItem<Item> {
     for duration in tray_status::STATUS_DURATIONS {
         duration_items.push(
             StandardItem {
-                label: menu_label(tray_status::duration_label(duration)),
+                label: menu_label(duration.label()),
                 enabled: duration_enabled,
                 activate: Box::new(move |item: &mut Item| {
                     item.send(TrayCommand::SetStatusDuration(duration))

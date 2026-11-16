@@ -17,7 +17,6 @@ pub(super) struct Live {
     pub(super) broker_running: Arc<AtomicBool>,
     pub(super) callbacks: Option<mpsc::UnboundedReceiver<TrouterCallback>>,
     pub(super) route_id: Option<String>,
-    /// Call-leg URLs to DELETE on hangup so the mixer drops our tile.
     pub(super) call_legs: Vec<String>,
     pub(super) skip_leave: bool,
     pub(super) cancel_leave: bool,
@@ -25,17 +24,6 @@ pub(super) struct Live {
     pub(super) video_counters: Arc<VideoCounters>,
 }
 
-pub(super) fn remember_call_leg(live: &mut Live, url: Option<&str>) {
-    let Some(url) = url.filter(|url| !url.is_empty()) else {
-        return;
-    };
-    if !live.call_legs.iter().any(|known| known == url) {
-        live.call_legs.push(url.to_owned());
-    }
-}
-
-/// Stop camera/share and tell the mixer before leave, so remotes drop our tile
-/// instead of freezing the last frame.
 pub(super) async fn stop_local_publish(
     local_video: &mut LocalVideo,
     remote: &RemoteCall,
@@ -101,7 +89,9 @@ pub(super) async fn tear_down(
     report: &mut CallReport,
     cancelled: bool,
 ) {
-    // Drop DeepFilterNet capture hook so the next call starts without a stale post-processor.
+    if crate::noise_stage::overloaded() {
+        timeline.record("noise suppression", "DeepFilterNet too slow, WebRTC only");
+    }
     crate::noise_stage::clear();
     // Stop keep-alive / broker first so Teams does not see us as still present.
     live.broker_running.store(false, Ordering::SeqCst);

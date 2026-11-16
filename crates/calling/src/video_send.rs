@@ -215,7 +215,6 @@ pub struct LocalVideo {
     /// The desktop dialog already bound the PipeWire stream. Later `StartShare`
     /// commands must attach that capturer, not replace it.
     portal_bound: bool,
-    /// Optional uplink cap from the bitrate governor (never above mixer max-br).
     camera_bitrate_cap: Option<u64>,
 }
 
@@ -479,9 +478,6 @@ impl LocalVideo {
         self.lines.is_some()
     }
 
-    /// Drop senders that belonged to a peer connection that was replaced.
-    /// Detach tracks first — closing a peer while a live camera/share track is
-    /// still attached can block the call task indefinitely (UI hang → kill).
     pub fn clear_lines(&mut self) {
         if let Some(lines) = self.lines.take() {
             let _ = lines.camera.sender().set_track(None);
@@ -603,7 +599,6 @@ impl LocalVideo {
         Self::set_active(sender, true)
     }
 
-    /// Apply or clear a governor cap on the camera encodings; mixer limits stay the ceiling.
     pub fn cap_camera_bitrate(&mut self, cap: Option<u64>) -> Result<()> {
         if self.camera_bitrate_cap == cap {
             return Ok(());
@@ -960,7 +955,6 @@ mod tests {
                 libwebrtc::media_stream_track::MediaStreamTrack::Video(video.camera_track()),
             ))
             .expect("attach");
-        // Must not SIGSEGV on nullptr (peer switch calls clear_lines → set_track(None)).
         // Do not call sender.track() afterwards: the FFI track() wrapper crashes on a null
         // webrtc track (get_or_create_media_stream_track).
         sender.set_track(None).expect("detach must accept nullptr");

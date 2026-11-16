@@ -29,7 +29,7 @@ pub(super) fn gathering_settled(complete: bool, since_udp_relay: Option<Duration
 }
 
 impl Gathered {
-    fn settled(&self) -> bool {
+    pub(super) fn settled(&self) -> bool {
         let since_udp_relay = self
             .relay_seen_at
             .lock()
@@ -104,13 +104,12 @@ pub(super) struct GlareResend {
     pub(super) at: Instant,
 }
 
-pub(super) struct AnsweredMedia {
-    pub(super) remote: RemoteOffer,
-    /// Teams renegotiation offer that produced this answer (for receive-slot mapping).
-    pub(super) offer_sdp: String,
-    pub(super) answer_sdp: String,
-    pub(super) camera_mid: Option<String>,
-    pub(super) receiving_share_mid: Option<String>,
+/// Renegotiation usually carries only `mediaAnswer`/`rejection`; keep the other leg links unless replaced.
+pub(super) fn replace_leg_media_links(
+    media_links: &mut BTreeMap<String, String>,
+    leg_links: &BTreeMap<String, String>,
+) {
+    media_links.extend(leg_links.clone());
 }
 
 pub(super) fn answers_offer(callback_path: &str, reply_tags: &[String]) -> bool {
@@ -181,7 +180,7 @@ pub(super) fn open_peer(
     })
 }
 
-fn open_data_channel(
+pub(super) fn open_data_channel(
     peer: &PeerConnection,
     sender: mpsc::UnboundedSender<PeerEvent>,
 ) -> Result<DataChannel> {
@@ -194,7 +193,7 @@ fn open_data_channel(
     Ok(channel)
 }
 
-fn one_to_one_directions<'a>(
+pub(super) fn one_to_one_directions<'a>(
     camera: bool,
     share: bool,
     camera_mid: &'a str,
@@ -213,7 +212,7 @@ fn one_to_one_directions<'a>(
     }
 }
 
-fn share_mid_in(offer_text: &str) -> Option<String> {
+pub(super) fn share_mid_in(offer_text: &str) -> Option<String> {
     let mut mid = None;
     for line in offer_text.lines().map(|line| line.trim_end_matches('\r')) {
         if line.starts_with("m=") {
@@ -300,6 +299,14 @@ pub(super) async fn create_offer(
     })
 }
 
+pub(super) struct AnsweredMedia {
+    pub(super) remote: RemoteOffer,
+    pub(super) offer_sdp: String,
+    pub(super) answer_sdp: String,
+    pub(super) camera_mid: Option<String>,
+    pub(super) receiving_share_mid: Option<String>,
+}
+
 pub(super) fn main_video_mid(remote: &RemoteOffer) -> Option<String> {
     let main: Vec<_> = remote
         .lines
@@ -327,8 +334,6 @@ pub(super) fn share_mids(remote: &RemoteOffer) -> Vec<String> {
         .collect()
 }
 
-/// Signaled carrier mid for screen sharing (for folded `x-multi-stream` lines
-/// `["3-0", "3"]` this is `"3"`, never the internal `"3-0"` fold helper).
 pub(super) fn share_carrier_mid(remote: &RemoteOffer) -> Option<String> {
     remote
         .lines
@@ -416,7 +421,7 @@ pub(super) async fn answer_offer_with(
     if mixer {
         // Keep camera sendrecv so a later set_track / updateMediaDescriptions
         // can start sending without renegotiation. Do NOT force folded
-        // x-multi-stream share lines to sendrecv — Teams rejects that answer
+        // x-multi-stream share lines to sendrecv: Teams rejects that answer
         // with SdpParsingFailure (301000); starting share upgrades the peer.
         if let Some(mid) = camera_mid.as_deref()
             && let Some(camera) = peer_transceiver(peer, mid)
@@ -570,7 +575,7 @@ pub(super) async fn offer_same_peer(
 }
 
 #[allow(clippy::too_many_arguments)]
-async fn build_same_peer_offer(
+pub(super) async fn build_same_peer_offer(
     peer: &PeerConnection,
     plan: &OfferPlan,
     layout: Layout,
@@ -688,6 +693,37 @@ pub(super) fn offer_reply_tags(body: &serde_json::Value) -> Vec<String> {
         .collect()
 }
 
+#[cfg(test)]
+mod reply_tag_tests {
+    use super::*;
+
+    #[test]
+    fn answers_and_rejections_match_the_offer_by_tag() {
+        let tags = vec!["aaaa1111".to_owned(), "bbbb2222".to_owned()];
+        assert!(answers_offer(
+            "callAgent/c/aaaa1111/call/mediaAnswer/",
+            &tags
+        ));
+        assert!(answers_offer("callAgent/c/bbbb2222/call/rejection/", &tags));
+        assert!(!answers_offer(
+            "callAgent/c/cccc3333/call/mediaAnswer/",
+            &tags
+        ));
+        assert!(answers_offer("callAgent/c/cccc3333/call/mediaAnswer/", &[]));
+    }
+
+    #[test]
+    fn an_offer_names_both_reply_tags() {
+        let body = serde_json::json!({"mediaNegotiation": {"links": {
+            "mediaAnswer": "https://t.example/callAgent/c/aaaa1111/call/mediaAnswer/",
+            "rejection": "https://t.example/callAgent/c/bbbb2222/call/rejection/"}}});
+        assert_eq!(
+            offer_reply_tags(&body),
+            vec!["aaaa1111".to_owned(), "bbbb2222".to_owned()]
+        );
+    }
+}
+
 pub(super) async fn apply_answer(
     peer: &PeerConnection,
     teams_answer: &str,
@@ -709,7 +745,7 @@ pub(super) async fn apply_hold_answer(
     set_browser_answer(peer, &keep_media_running(&answer, browser_offer)).await
 }
 
-async fn set_browser_answer(peer: &PeerConnection, answer: &str) -> Result<()> {
+pub(super) async fn set_browser_answer(peer: &PeerConnection, answer: &str) -> Result<()> {
     let description = parse_sdp(answer, SdpType::Answer)?;
     peer.set_remote_description(description)
         .await
@@ -761,7 +797,7 @@ pub(super) fn dump_timeline(options: &CallOptions, timeline: &Timeline, failure:
     let _ = std::fs::write(directory.join("timeline.txt"), lines.join("\n"));
 }
 
-fn mask_address(token: &str) -> String {
+pub(super) fn mask_address(token: &str) -> String {
     let dotted_quad =
         token.split('.').count() == 4 && token.split('.').all(|part| part.parse::<u8>().is_ok());
     let colon_address =
@@ -772,36 +808,5 @@ fn mask_address(token: &str) -> String {
         "<addr>".to_owned()
     } else {
         token.to_owned()
-    }
-}
-
-#[cfg(test)]
-mod reply_tag_tests {
-    use super::*;
-
-    #[test]
-    fn answers_and_rejections_match_the_offer_by_tag() {
-        let tags = vec!["aaaa1111".to_owned(), "bbbb2222".to_owned()];
-        assert!(answers_offer(
-            "callAgent/c/aaaa1111/call/mediaAnswer/",
-            &tags
-        ));
-        assert!(answers_offer("callAgent/c/bbbb2222/call/rejection/", &tags));
-        assert!(!answers_offer(
-            "callAgent/c/cccc3333/call/mediaAnswer/",
-            &tags
-        ));
-        assert!(answers_offer("callAgent/c/cccc3333/call/mediaAnswer/", &[]));
-    }
-
-    #[test]
-    fn an_offer_names_both_reply_tags() {
-        let body = serde_json::json!({"mediaNegotiation": {"links": {
-            "mediaAnswer": "https://t.example/callAgent/c/aaaa1111/call/mediaAnswer/",
-            "rejection": "https://t.example/callAgent/c/bbbb2222/call/rejection/"}}});
-        assert_eq!(
-            offer_reply_tags(&body),
-            vec!["aaaa1111".to_owned(), "bbbb2222".to_owned()]
-        );
     }
 }

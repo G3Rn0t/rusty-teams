@@ -8,7 +8,6 @@ pub enum VideoQuality {
 }
 
 impl VideoQuality {
-    /// Preferred capture height for this choice (Auto prefers 720 to keep uplink lean).
     pub fn capture_height(self) -> u32 {
         match self {
             Self::Auto | Self::P720 => 720,

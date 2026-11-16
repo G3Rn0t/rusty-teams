@@ -263,7 +263,6 @@ const GOVERNOR_RECOVER: f64 = 1.15;
 const GOVERNOR_STRESS_SAMPLES: u8 = 2;
 const GOVERNOR_RECOVER_WAIT_SECS: u64 = 4;
 
-/// Caps camera send bitrate when RTT/loss climb; recovers slowly when the path is clean.
 #[derive(Debug, Default)]
 pub struct BitrateGovernor {
     stress_streak: u8,
@@ -272,7 +271,6 @@ pub struct BitrateGovernor {
 }
 
 impl BitrateGovernor {
-    /// Observe a ~2 s health sample. Returns `true` when the cap changed (including clear on full recovery).
     pub fn observe(&mut self, now: Instant, rtt_ms: f64, loss_pct: f64, target_bps: u64) -> bool {
         if target_bps == 0 {
             return false;

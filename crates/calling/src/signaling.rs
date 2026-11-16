@@ -953,7 +953,6 @@ impl Signaling {
         .map(|_| ())
     }
 
-    /// Hang up a connected call leg so the mixer drops our participant tile.
     pub async fn end_call_leg(&self, call_leg_url: &str) -> Result<()> {
         self.send(
             "DELETE callLeg (hangup)",

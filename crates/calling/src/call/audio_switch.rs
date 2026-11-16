@@ -7,6 +7,28 @@ pub(super) struct Recording {
     pub(super) per_second: Vec<(f32, f32)>,
 }
 
+pub(super) fn withhold_media(
+    muted: &mut bool,
+    audio: &AudioSetup,
+    software_audio: Option<&SoftwareAudio>,
+    remote: &RemoteCall,
+    local_video: &mut LocalVideo,
+    control: &CallControl,
+) {
+    *muted = apply_mute(
+        MuteCommand::Mute,
+        *muted,
+        audio,
+        software_audio,
+        remote,
+        control,
+    );
+    if local_video.camera_on() {
+        local_video.stop_camera();
+        control.send(CallUpdate::Camera(false));
+    }
+}
+
 pub(super) fn record_audio_devices(
     timeline: &Timeline,
     lists: &devices::DeviceLists,
@@ -113,28 +135,6 @@ pub(super) fn silence_for_hold(
     }
 }
 
-pub(super) fn withhold_media(
-    muted: &mut bool,
-    audio: &AudioSetup,
-    software_audio: Option<&SoftwareAudio>,
-    remote: &RemoteCall,
-    local_video: &mut LocalVideo,
-    control: &CallControl,
-) {
-    *muted = apply_mute(
-        MuteCommand::Mute,
-        *muted,
-        audio,
-        software_audio,
-        remote,
-        control,
-    );
-    if local_video.camera_on() {
-        local_video.stop_camera();
-        control.send(CallUpdate::Camera(false));
-    }
-}
-
 pub(super) fn swap_audio_track(peer: &PeerConnection, track: &RtcAudioTrack) -> Result<()> {
     let sender = peer
         .senders()
@@ -171,7 +171,7 @@ pub(super) fn software_wanted(
     )
 }
 
-fn restore_device_track(
+pub(super) fn restore_device_track(
     factory: &PeerConnectionFactory,
     input: &DeviceChoice,
     peer: &PeerConnection,
@@ -206,7 +206,6 @@ pub(super) fn sync_software_audio(
 ) {
     let running = software_audio.as_ref().map(|audio| audio.plan);
     if running == wanted && !restart {
-        // Keep the capture hook off while MicChain owns the mic (computer sound / Off / music).
         crate::noise_stage::apply_for_outgoing(mic_settings, software_audio.is_none());
         return;
     }
