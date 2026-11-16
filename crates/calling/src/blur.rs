@@ -735,7 +735,8 @@ mod tests {
     fn the_mask_age_counts_the_frames_shown_since_its_source_frame() {
         let seen = Arc::new(Mutex::new(Vec::new()));
         let mut source = MaskSource::with_inference(SlowSegmenter {
-            delay: Duration::from_millis(60),
+            // 200ms keeps CI (fast Mac hosts) from finishing before ≥3 refresh loops.
+            delay: Duration::from_millis(200),
             seen,
         });
         assert!(!source.refresh(|| marked_frame(5)));

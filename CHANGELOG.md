@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.4.0-joe.10] - 2026-11-16
+
+### Fixed
+
+- Flatpak build: allow Git `file://` for zypak's `nickle` submodule clone from
+  the flatpak-builder local cache (Git ≥ 2.38).
+- CI blur mask-age unit test: lengthen the slow segmenter delay so fast macOS
+  runners no longer flake with «mask came back before the model was done».
+- Linux Test and Release (packages/Flatpak) run on `px03` (`ci-runner-linux-03`,
+  16 GiB) instead of the 8 GiB `ubuntu-latest` pool.
+
 ## [0.4.0-joe.9] - 2026-11-16
 
 ### Fixed

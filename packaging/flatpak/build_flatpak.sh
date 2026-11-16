@@ -128,6 +128,12 @@ BUILDER_ARGS=(
   --default-branch=stable
 )
 
+# Git ≥ 2.38 blocks file:// by default; flatpak-builder clones zypak's nickle
+# submodule from its local git cache that way.
+export GIT_CONFIG_COUNT=1
+export GIT_CONFIG_KEY_0=protocol.file.allow
+export GIT_CONFIG_VALUE_0=always
+
 echo "flatpak-builder (SDK build)…"
 (
   cd "$FLATPAK_DIR"

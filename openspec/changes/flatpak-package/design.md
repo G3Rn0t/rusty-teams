@@ -67,6 +67,8 @@ Build constraints that shape the approach: `vendor/webrtc-sys` requires Clang �
 
 **Choice:** Ubuntu 22.04 ships `flatpak-builder` 1.2.x without `--env`. Rewrite AppStream `<release>` on the host before the build. When CI sets `TEAMS_GOOGLE_CLIENT_ID` / secret, inject them into a temporary manifest copy under `build-options.env` for `option_env!` only. Never commit secrets or the runtime manifest (`.ci-manifest.yml`).
 
+**Git file protocol:** Before `flatpak-builder`, set `protocol.file.allow=always` via process-local `GIT_CONFIG_*` so zypak's `nickle` submodule can clone from the builder's local git cache (Git ≥ 2.38 otherwise fails with `transport 'file' not allowed`).
+
 ## Risks / Trade-offs
 
 - [Clang/runtime mismatch] → Pin SDK + LLVM extension after a smoke `flatpak-builder` and document the exact versions in the manifest comment.
