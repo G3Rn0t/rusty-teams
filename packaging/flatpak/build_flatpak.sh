@@ -135,10 +135,22 @@ export GIT_CONFIG_KEY_0=protocol.file.allow
 export GIT_CONFIG_VALUE_0=always
 
 echo "flatpak-builder (SDK build)…"
-(
-  cd "$FLATPAK_DIR"
-  flatpak-builder "${BUILDER_ARGS[@]}" "$WORKDIR" "$(basename "$RUNTIME_MANIFEST")"
-)
+# crates.io / GitHub downloads occasionally die with GnuTLS recv errors; retry a few times.
+attempts=3
+for attempt in $(seq 1 "$attempts"); do
+  if (
+    cd "$FLATPAK_DIR"
+    flatpak-builder "${BUILDER_ARGS[@]}" "$WORKDIR" "$(basename "$RUNTIME_MANIFEST")"
+  ); then
+    break
+  fi
+  if [[ "$attempt" -eq "$attempts" ]]; then
+    echo "flatpak-builder failed after ${attempts} attempts" >&2
+    exit 1
+  fi
+  echo "flatpak-builder failed (attempt ${attempt}/${attempts}); retrying in 30s…" >&2
+  sleep 30
+done
 
 if command -v flatpak-builder-lint >/dev/null 2>&1; then
   # Lint the committed manifest (no secrets), not the runtime copy.

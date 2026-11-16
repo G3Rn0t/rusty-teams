@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.4.0-joe.12] - 2026-11-16
+
+### Fixed
+
+- Flatpak build retries `flatpak-builder` up to three times on transient crates.io
+  / GnuTLS download failures.
+- Linux Test and package builds cap Cargo parallelism (`-j2`) to avoid clang-21
+  linker Bus errors on the 16 GiB runners.
+
 ## [0.4.0-joe.11] - 2026-11-16
 
 ### Fixed

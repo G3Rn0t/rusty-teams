@@ -20,6 +20,7 @@ jobs:
       CC: clang-21
       CXX: clang++-21
       CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER: clang-21
+      CARGO_BUILD_JOBS: "2"
       NODE_OPTIONS: --dns-result-order=ipv4first
       CARGO_TERM_COLOR: always
       TEAMS_GOOGLE_CLIENT_ID: ${{ secrets.TEAMS_GOOGLE_CLIENT_ID }}
@@ -49,7 +50,7 @@ jobs:
           fi
 
       - name: Build
-        run: cargo build -p app --release
+        run: cargo build -p app --release -j2
 
       - name: Package deb rpm arch
         env:

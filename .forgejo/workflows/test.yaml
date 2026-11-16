@@ -40,6 +40,8 @@ jobs:
       CC: clang-21
       CXX: clang++-21
       CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER: clang-21
+      # Parallel clang links of app/GPUI still SIGBUS on 16 GiB runners; cap jobs.
+      CARGO_BUILD_JOBS: "2"
       NODE_OPTIONS: --dns-result-order=ipv4first
       CARGO_TERM_COLOR: always
     steps:
@@ -50,7 +52,7 @@ jobs:
       - uses: ./.forgejo/actions/setup-rust
 
       - name: Tests
-        run: cargo test
+        run: cargo test -j2
 
   windows:
     name: Windows

@@ -75,6 +75,8 @@ modules:
         CC: clang
         CXX: clang++
         CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER: clang
+        # Cap parallel links; clang Bus errors on 16 GiB CI runners otherwise.
+        CARGO_BUILD_JOBS: '2'
         # Override .cargo/config.toml mold; llvm21 ships lld.
         RUSTFLAGS: -C link-arg=-fuse-ld=lld
         # Extracted webrtc-linux-x64-release.zip (see sources).
@@ -86,7 +88,7 @@ modules:
       - bsdtar -xf webrtc-linux-x64-release.zip -C webrtc
       # AppStream <release> is rewritten by build_flatpak.sh on the host (Jammy
       # flatpak-builder 1.2 has no --env for FLATPAK_APP_VERSION).
-      - cargo build -p app --release --frozen --offline
+      - cargo build -p app --release --frozen --offline -j2
       - install -Dm755 target/release/teams /app/bin/rusty-teams
       - ln -sf rusty-teams /app/bin/teams
       - install -Dm644 packaging/flatpak/net.devops_geek.RustyTeams.desktop /app/share/applications/net.devops_geek.RustyTeams.desktop
