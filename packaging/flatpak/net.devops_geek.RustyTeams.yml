@@ -10,6 +10,10 @@ sdk: org.freedesktop.Sdk
 sdk-extensions:
   - org.freedesktop.Sdk.Extension.rust-stable
   - org.freedesktop.Sdk.Extension.llvm21
+# Jammy flatpak-builder 1.2 runs appstream-compose under bwrap; act/Docker runners
+# then fail with execvp even when appstream-util is installed on the host. Metainfo
+# is still installed into the app and validated on the host with appstreamcli.
+appstream-compose: false
 command: rusty-teams
 finish-args:
   - --share=network

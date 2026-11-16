@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.4.0-joe.16] - 2026-11-16
+
+### Fixed
+
+- Flatpak manifest sets `appstream-compose: false` so Jammy flatpak-builder
+  does not run `appstream-compose` under bwrap (act/Docker: `execvp` miss).
+  Metainfo stays in the app and is validated with host `appstreamcli`.
+
 ## [0.4.0-joe.15] - 2026-11-16
 
 ### Fixed

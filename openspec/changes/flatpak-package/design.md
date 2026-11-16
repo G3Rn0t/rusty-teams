@@ -71,7 +71,7 @@ Build constraints that shape the approach: `vendor/webrtc-sys` requires Clang â‰
 
 **Host strip tools:** The Flatpak CI job installs `elfutils` so `eu-strip` exists when flatpak-builder strips zypak binaries into `/app/lib/debug`.
 
-**Host AppStream compose:** Jammy's `appstream` package is only `appstreamcli`. flatpak-builder finish still needs `appstream-compose` from `appstream-util`; the Flatpak job installs both and `build_flatpak.sh` fails early if the binary is missing.
+**AppStream compose:** The manifest sets `appstream-compose: false`. Jammy `flatpak-builder` 1.2 runs `appstream-compose` under bwrap; on act/Docker runners that fails with `execvp â€¦ No such file or directory` even when `appstream-util` is on the host. Metainfo is still installed into the app; `build_flatpak.sh` validates it with host `appstreamcli` before the build. Single-file `.flatpak` bundles do not need the OSTree AppStream branch that compose would write.
 
 ## Risks / Trade-offs
 

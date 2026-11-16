@@ -18,7 +18,7 @@
 - [x] 2.7 Install `elfutils` (`eu-strip`) in the Flatpak CI job so flatpak-builder can strip zypak debuginfo; verify the job no longer fails with `Failed to execute child process "eu-strip"`
 - [x] 2.8 Retry `flatpak-builder` up to three times on transient network/download failures; verify a GnuTLS/crates.io blip does not fail the job on the first attempt only
 - [x] 2.9 Clear Flatpak SDK `CFLAGS`/`CXXFLAGS` for the rusty-teams module so `aws-lc-sys` jitterentropy builds with `-O0`; verify the build no longer fails with «must not be compiled with optimizations»
-- [x] 2.10 Install `appstream-util` (`appstream-compose`) in the Flatpak CI job and fail early if missing; verify finish no longer fails with `execvp appstream-compose: No such file or directory`
+- [x] 2.10 Set manifest `appstream-compose: false` and validate metainfo with host `appstreamcli`; verify finish no longer fails with `execvp appstream-compose: No such file or directory` on Jammy act runners
 
 ## 3. Release CI and docs
 

@@ -13,9 +13,9 @@ source "$ROOT/packaging/common.sh"
 
 cd "$ROOT"
 
-for cmd in flatpak flatpak-builder python3 curl appstream-compose; do
+for cmd in flatpak flatpak-builder python3 curl appstreamcli; do
   if ! command -v "$cmd" >/dev/null 2>&1; then
-    echo "Missing $cmd (install appstream-util for appstream-compose)" >&2
+    echo "Missing $cmd" >&2
     exit 1
   fi
 done
@@ -76,6 +76,9 @@ fi
 }
 
 desktop-file-validate "$FLATPAK_DIR/${APP_ID}.desktop"
+# Validate before the version rewrite so CI catches schema issues early; rewrite
+# only swaps the release placeholder for the tag.
+appstreamcli validate --no-net "$METAINFO" || appstreamcli validate "$METAINFO"
 
 echo "Writing AppStream release $VERSION ($DATE) into metainfo (host, pre-builder)"
 python3 - "$METAINFO" "$VERSION" "$DATE" <<'PY'
