@@ -63,9 +63,9 @@ Build constraints that shape the approach: `vendor/webrtc-sys` requires Clang â‰
 
 **Why:** Best-effort packaging hid broken Flatpaks from releases.
 
-### 7. Secrets
+### 7. Secrets and AppStream version (Jammy builder)
 
-**Choice:** Pass `TEAMS_GOOGLE_CLIENT_ID` / secret via `flatpak-builder --env` in CI only. Never commit them into the manifest or metainfo.
+**Choice:** Ubuntu 22.04 ships `flatpak-builder` 1.2.x without `--env`. Rewrite AppStream `<release>` on the host before the build. When CI sets `TEAMS_GOOGLE_CLIENT_ID` / secret, inject them into a temporary manifest copy under `build-options.env` for `option_env!` only. Never commit secrets or the runtime manifest (`.ci-manifest.yml`).
 
 ## Risks / Trade-offs
 

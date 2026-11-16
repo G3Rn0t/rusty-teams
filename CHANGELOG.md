@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.4.0-joe.9] - 2026-11-16
+
+### Fixed
+
+- Flatpak CI on Ubuntu 22.04: install modern `tomlkit` for the cargo generator,
+  and build without `flatpak-builder --env` (Jammy 1.2.x). AppStream release
+  metadata is written on the host; Google OAuth env is injected only into a
+  temporary manifest copy for `option_env!`.
+
 ## [0.4.0-joe.7] - 2026-11-16
 
 ### Added

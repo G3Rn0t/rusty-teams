@@ -2,6 +2,10 @@
 # Build dist/rusty-teams-<ver>-x86_64.flatpak from the SDK manifest (no host binary wrap).
 # Intended entry point for Forgejo Release (Linux) job `flatpak` on ubuntu-latest:
 # installs Flathub Platform/SDK on the runner, builds inside the SDK, bundles the .flatpak.
+#
+# Jammy flatpak-builder 1.2.x has no --env flag. Metainfo version/date are rewritten on the
+# host before the build; Google OAuth env (if set) is injected into a temporary manifest copy
+# under build-options.env (never committed).
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 # shellcheck source=../common.sh
@@ -20,6 +24,8 @@ VERSION="$(packaging_version "$ROOT")"
 APP_ID=net.devops_geek.RustyTeams
 FLATPAK_DIR="$ROOT/packaging/flatpak"
 MANIFEST="$FLATPAK_DIR/${APP_ID}.yml"
+RUNTIME_MANIFEST="$FLATPAK_DIR/.ci-manifest.yml"
+METAINFO="$FLATPAK_DIR/${APP_ID}.metainfo.xml"
 GENERATOR="${FLATPAK_CARGO_GENERATOR:-$FLATPAK_DIR/flatpak-cargo-generator.py}"
 GENERATED="$FLATPAK_DIR/generated-sources.json"
 WORKDIR="$FLATPAK_DIR/.flatpak-build"
@@ -27,6 +33,11 @@ REPO="$FLATPAK_DIR/.flatpak-repo"
 CACHE="$FLATPAK_DIR/.flatpak-cache"
 DATE="$(date -u +%Y-%m-%d)"
 EXCEPTIONS="$FLATPAK_DIR/flatpak-builder-lint-exceptions.json"
+
+cleanup() {
+  rm -f "$RUNTIME_MANIFEST"
+}
+trap cleanup EXIT
 
 mkdir -p "$ROOT/dist" "$CACHE"
 
@@ -56,6 +67,48 @@ fi
 
 desktop-file-validate "$FLATPAK_DIR/${APP_ID}.desktop"
 
+echo "Writing AppStream release $VERSION ($DATE) into metainfo (host, pre-builder)"
+python3 - "$METAINFO" "$VERSION" "$DATE" <<'PY'
+import re, sys
+path, version, date = sys.argv[1:4]
+text = open(path, encoding="utf-8").read()
+new, n = re.subn(
+    r'<release version="[^"]*" date="[^"]*"/>',
+    f'<release version="{version}" date="{date}"/>',
+    text,
+    count=1,
+)
+if n != 1:
+    raise SystemExit(f"expected one <release …/> placeholder in {path}, found {n}")
+open(path, "w", encoding="utf-8").write(new)
+PY
+
+echo "Preparing runtime manifest (Jammy flatpak-builder has no --env)"
+python3 - "$MANIFEST" "$RUNTIME_MANIFEST" <<'PY'
+import os, sys
+from pathlib import Path
+
+try:
+    import yaml
+except ImportError as e:
+    raise SystemExit("PyYAML required to inject build-options.env") from e
+
+src, dst = Path(sys.argv[1]), Path(sys.argv[2])
+doc = yaml.safe_load(src.read_text(encoding="utf-8"))
+modules = doc.get("modules") or []
+rusty = next((m for m in modules if isinstance(m, dict) and m.get("name") == "rusty-teams"), None)
+if rusty is None:
+    raise SystemExit("rusty-teams module missing from manifest")
+opts = rusty.setdefault("build-options", {})
+env = opts.setdefault("env", {})
+for key in ("TEAMS_GOOGLE_CLIENT_ID", "TEAMS_GOOGLE_CLIENT_SECRET"):
+    val = os.environ.get(key, "").strip()
+    if val:
+        env[key] = val
+# Keep comments out; dump a clean copy for the builder only.
+dst.write_text(yaml.safe_dump(doc, sort_keys=False, allow_unicode=True), encoding="utf-8")
+PY
+
 echo "Ensuring Freedesktop 25.08 SDK + rust-stable + llvm21"
 flatpak remote-add --if-not-exists --user flathub https://flathub.org/repo/flathub.flatpakrepo
 flatpak install -y --user flathub \
@@ -73,25 +126,16 @@ BUILDER_ARGS=(
   --repo="$REPO"
   --state-dir="$CACHE"
   --default-branch=stable
-  --env=FLATPAK_APP_VERSION="$VERSION"
-  --env=FLATPAK_APP_DATE="$DATE"
 )
-
-# Bake Google OAuth client into the binary when CI provides it (never commit secrets).
-if [[ -n "${TEAMS_GOOGLE_CLIENT_ID:-}" ]]; then
-  BUILDER_ARGS+=(--env=TEAMS_GOOGLE_CLIENT_ID="$TEAMS_GOOGLE_CLIENT_ID")
-fi
-if [[ -n "${TEAMS_GOOGLE_CLIENT_SECRET:-}" ]]; then
-  BUILDER_ARGS+=(--env=TEAMS_GOOGLE_CLIENT_SECRET="$TEAMS_GOOGLE_CLIENT_SECRET")
-fi
 
 echo "flatpak-builder (SDK build)…"
 (
   cd "$FLATPAK_DIR"
-  flatpak-builder "${BUILDER_ARGS[@]}" "$WORKDIR" "$(basename "$MANIFEST")"
+  flatpak-builder "${BUILDER_ARGS[@]}" "$WORKDIR" "$(basename "$RUNTIME_MANIFEST")"
 )
 
 if command -v flatpak-builder-lint >/dev/null 2>&1; then
+  # Lint the committed manifest (no secrets), not the runtime copy.
   if [[ -f "$EXCEPTIONS" ]]; then
     flatpak-builder-lint --exceptions "$EXCEPTIONS" manifest "$MANIFEST"
   else

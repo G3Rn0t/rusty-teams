@@ -13,6 +13,7 @@
 - [x] 2.2 Rewrite `packaging/flatpak/net.devops_geek.RustyTeams.yml` for SDK build, finish-args from the design, zypak module, Chrome `extra-data` + `/app/bin/google-chrome` wrapper, cargo sources, and `only-arches: [x86_64]`; verify the manifest parses (`flatpak-builder --show-deps` or dry-run) and finish-args include notifications, tray, pipewire, pulseaudio, and `--device=all`
 - [x] 2.3 Replace `packaging/flatpak/build_flatpak.sh` to generate cargo sources, run `flatpak-builder`, validate, and emit `dist/rusty-teams-<ver>-x86_64.flatpak`; verify the script fails loudly on missing tools and does not wrap a host binary by default
 - [x] 2.4 Add `iproute2` (or equivalent) into `/app` if the Platform lacks `ss`; verify managed Chrome kill path can locate a listener PID inside the sandbox, or confirm `ss` is present and skip the module
+- [x] 2.5 Jammy compatibility: rewrite metainfo on the host and inject Google OAuth via a temporary manifest `build-options.env` (no `flatpak-builder --env`); verify the script invokes builder without `--env=` flags
 
 ## 3. Release CI and docs
 

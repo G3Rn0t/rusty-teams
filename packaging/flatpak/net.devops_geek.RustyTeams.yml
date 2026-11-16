@@ -84,10 +84,8 @@ modules:
       - sed -i '/fuse-ld=mold/d' .cargo/config.toml
       - mkdir -p webrtc
       - bsdtar -xf webrtc-linux-x64-release.zip -C webrtc
-      - |
-        test -n "${FLATPAK_APP_VERSION:-}" && test -n "${FLATPAK_APP_DATE:-}"
-        sed -i "s/version=\"0.0.0\" date=\"1970-01-01\"/version=\"${FLATPAK_APP_VERSION}\" date=\"${FLATPAK_APP_DATE}\"/" \
-          packaging/flatpak/net.devops_geek.RustyTeams.metainfo.xml
+      # AppStream <release> is rewritten by build_flatpak.sh on the host (Jammy
+      # flatpak-builder 1.2 has no --env for FLATPAK_APP_VERSION).
       - cargo build -p app --release --frozen --offline
       - install -Dm755 target/release/teams /app/bin/rusty-teams
       - ln -sf rusty-teams /app/bin/teams
@@ -114,5 +112,6 @@ modules:
           - packaging/flatpak/.flatpak-cache
           - packaging/flatpak/stage
           - packaging/flatpak/generated-sources.json
+          - packaging/flatpak/.ci-manifest.yml
           - target
           - dist

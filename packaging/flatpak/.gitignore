@@ -2,6 +2,7 @@ stage/
 .flatpak-build/
 .flatpak-repo/
 .flatpak-cache/
+.ci-manifest.yml
 generated-sources.json
 cargo-sources.json
 flatpak-cargo-generator.py
