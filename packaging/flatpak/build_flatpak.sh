@@ -166,11 +166,12 @@ for attempt in $(seq 1 "$attempts"); do
     break
   fi
   if grep -Eiq \
-    'Unknown socket type|Invalid dbus name|execvp appstream-compose|must not be compiled with optimizations|bsdtar: Error exit delayed|Can.t set user=' \
+    'Unknown socket type|Invalid dbus name|Refspec .* not found|execvp appstream-compose|must not be compiled with optimizations|bsdtar: Error exit delayed|Can.t set user=' \
     "$BUILD_LOG"; then
     echo "flatpak-builder permanent failure (not retrying)" >&2
     exit 1
   fi
+
   if [[ "$attempt" -eq "$attempts" ]]; then
     echo "flatpak-builder failed after ${attempts} attempts" >&2
     exit 1
@@ -189,7 +190,9 @@ if command -v flatpak-builder-lint >/dev/null 2>&1; then
 fi
 
 out="$ROOT/dist/rusty-teams-${VERSION}-x86_64.flatpak"
-flatpak build-bundle "$REPO" "$out" "$APP_ID" --runtime-repo=https://flathub.org/repo/flathub.flatpakrepo
+# Must match --default-branch above (not flatpak's implicit "master").
+flatpak build-bundle "$REPO" "$out" "$APP_ID" stable \
+  --runtime-repo=https://flathub.org/repo/flathub.flatpakrepo
 [[ -s "$out" ]] || {
   echo "bundle missing or empty: $out" >&2
   exit 1

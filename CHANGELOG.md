@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0-joe.22] - 2026-11-16
+
+### Fixed
+
+- Flatpak `build-bundle` requests branch `stable` (matches `--default-branch`
+  / manifest `branch`) instead of implicit `master`.
+
 ## [0.4.0-joe.21] - 2026-11-16
 
 ### Fixed
