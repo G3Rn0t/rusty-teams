@@ -57,7 +57,17 @@ if command -v uv >/dev/null 2>&1; then
   uv run --with "${CARGO_GEN_DEPS[0]}" --with "${CARGO_GEN_DEPS[1]}" --with "${CARGO_GEN_DEPS[2]}" \
     "$GENERATOR" "$ROOT/Cargo.lock" -o "$GENERATED"
 else
-  python3 -m pip install --user -q "${CARGO_GEN_DEPS[@]}"
+  # Corrupted PyPI wheels show up as hash mismatches; --no-cache-dir + retry.
+  pip_ok=0
+  for attempt in 1 2 3 4 5; do
+    if python3 -m pip install --user --no-cache-dir -q "${CARGO_GEN_DEPS[@]}"; then
+      pip_ok=1
+      break
+    fi
+    echo "pip install failed (attempt ${attempt}/5); retrying…" >&2
+    sleep $((attempt * 3))
+  done
+  [[ "$pip_ok" -eq 1 ]] || { echo "pip install of cargo-generator deps failed" >&2; exit 1; }
   python3 "$GENERATOR" "$ROOT/Cargo.lock" -o "$GENERATED"
 fi
 [[ -s "$GENERATED" ]] || {

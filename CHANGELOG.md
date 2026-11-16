@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0-joe.13] - 2026-11-16
+
+### Fixed
+
+- CI retries rustup install/update and PyPI `pip install --no-cache-dir` on
+  transient CDN / corrupted-wheel failures that aborted Flatpak and Linux Test.
+
 ## [0.4.0-joe.12] - 2026-11-16
 
 ### Fixed

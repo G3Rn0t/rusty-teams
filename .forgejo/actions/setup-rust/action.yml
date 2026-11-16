@@ -40,7 +40,18 @@ runs:
           rustup_args+=(--default-host "$default_host")
         fi
         if ! command -v rustup >/dev/null 2>&1; then
-          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- "${rustup_args[@]}"
+          # Transient CDN failures (rustup-init download) are common on CI; retry.
+          ok=0
+          for attempt in 1 2 3 4 5; do
+            if curl --proto '=https' --tlsv1.2 --retry 5 --retry-all-errors --retry-delay 2 \
+              -sSf https://sh.rustup.rs | sh -s -- "${rustup_args[@]}"; then
+              ok=1
+              break
+            fi
+            echo "rustup install failed (attempt ${attempt}/5); retrying…" >&2
+            sleep $((attempt * 5))
+          done
+          [[ "$ok" -eq 1 ]] || { echo "rustup install failed after retries" >&2; exit 1; }
           # shellcheck disable=SC1091
           if [[ -f "$HOME/.cargo/env" ]]; then
             source "$HOME/.cargo/env"
@@ -63,7 +74,11 @@ runs:
           rustup show
         else
           rustup default stable
-          rustup update stable
+          for attempt in 1 2 3; do
+            rustup update stable && break
+            echo "rustup update failed (attempt ${attempt}/3); retrying…" >&2
+            sleep $((attempt * 5))
+          done
         fi
         # Extra targets (e.g. macOS universal x86_64 slice)
         for target in ${{ inputs.targets }}; do

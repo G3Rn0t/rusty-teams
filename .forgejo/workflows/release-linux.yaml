@@ -112,8 +112,18 @@ jobs:
             python3 python3-pip python3-venv \
             curl ca-certificates jq
           # Jammy apt tomlkit is too old for flatpak-cargo-generator (.unwrap).
-          python3 -m pip install --user -q \
-            'aiohttp>=3.9.5,<4' 'tomlkit>=0.13.3,<1' 'PyYAML>=6.0.2,<7'
+          # PyPI hash mismatches = corrupted download; retry without cache.
+          pip_ok=0
+          for attempt in 1 2 3 4 5; do
+            if python3 -m pip install --user --no-cache-dir -q \
+              'aiohttp>=3.9.5,<4' 'tomlkit>=0.13.3,<1' 'PyYAML>=6.0.2,<7'; then
+              pip_ok=1
+              break
+            fi
+            echo "pip install failed (attempt ${attempt}/5); retrying…" >&2
+            sleep $((attempt * 3))
+          done
+          [[ "$pip_ok" -eq 1 ]] || exit 1
           # When flatpak-builder-lint is available it must pass (build_flatpak.sh).
           sudo apt-get install --no-install-recommends -y flatpak-builder-lint || true
           command -v eu-strip >/dev/null
