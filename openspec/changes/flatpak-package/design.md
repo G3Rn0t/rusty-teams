@@ -73,6 +73,8 @@ Build constraints that shape the approach: `vendor/webrtc-sys` requires Clang �
 
 **AppStream compose:** The manifest sets `appstream-compose: false`. Jammy `flatpak-builder` 1.2 runs `appstream-compose` under bwrap; on act/Docker runners that fails with `execvp … No such file or directory` even when `appstream-util` is on the host. Metainfo is still installed into the app; `build_flatpak.sh` validates it with host `appstreamcli` before the build. Single-file `.flatpak` bundles do not need the OSTree AppStream branch that compose would write.
 
+**Builder host vs finish-args:** Jammy apt `flatpak` 1.12 rejects `--socket=pipewire`. CI installs Flathub `org.flatpak.Builder` and runs `flatpak-builder` through it so Runtime 25.08 finish-args (including PipeWire) export cleanly. Retries skip permanent finish/tooling errors.
+
 ## Risks / Trade-offs
 
 - [Clang/runtime mismatch] → Pin SDK + LLVM extension after a smoke `flatpak-builder` and document the exact versions in the manifest comment.

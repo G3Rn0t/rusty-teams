@@ -13,7 +13,7 @@ source "$ROOT/packaging/common.sh"
 
 cd "$ROOT"
 
-for cmd in flatpak flatpak-builder python3 curl appstreamcli; do
+for cmd in flatpak python3 curl appstreamcli; do
   if ! command -v "$cmd" >/dev/null 2>&1; then
     echo "Missing $cmd" >&2
     exit 1
@@ -34,8 +34,10 @@ CACHE="$FLATPAK_DIR/.flatpak-cache"
 DATE="$(date -u +%Y-%m-%d)"
 EXCEPTIONS="$FLATPAK_DIR/flatpak-builder-lint-exceptions.json"
 
+BUILD_LOG=""
 cleanup() {
   rm -f "$RUNTIME_MANIFEST"
+  [[ -n "$BUILD_LOG" ]] && rm -f "$BUILD_LOG"
 }
 trap cleanup EXIT
 
@@ -122,13 +124,20 @@ for key in ("TEAMS_GOOGLE_CLIENT_ID", "TEAMS_GOOGLE_CLIENT_SECRET"):
 dst.write_text(yaml.safe_dump(doc, sort_keys=False, allow_unicode=True), encoding="utf-8")
 PY
 
-echo "Ensuring Freedesktop 25.08 SDK + rust-stable + llvm21"
+echo "Ensuring Freedesktop 25.08 SDK + rust-stable + llvm21 + org.flatpak.Builder"
 flatpak remote-add --if-not-exists --user flathub https://flathub.org/repo/flathub.flatpakrepo
 flatpak install -y --user flathub \
   org.freedesktop.Platform//25.08 \
   org.freedesktop.Sdk//25.08 \
   org.freedesktop.Sdk.Extension.rust-stable//25.08 \
-  org.freedesktop.Sdk.Extension.llvm21//25.08
+  org.freedesktop.Sdk.Extension.llvm21//25.08 \
+  org.flatpak.Builder
+# Jammy host flatpak 1.12 rejects --socket=pipewire; Builder ships a current
+# flatpak-builder that accepts Runtime 25.08 finish-args.
+FLATPAK_BUILDER=(
+  flatpak run --user --filesystem=host --share=network --command=flatpak-builder
+  org.flatpak.Builder
+)
 
 rm -rf "$WORKDIR" "$REPO"
 mkdir -p "$REPO"
@@ -147,15 +156,27 @@ export GIT_CONFIG_COUNT=1
 export GIT_CONFIG_KEY_0=protocol.file.allow
 export GIT_CONFIG_VALUE_0=always
 
-echo "flatpak-builder (SDK build)…"
+echo "flatpak-builder via org.flatpak.Builder (SDK build)…"
 # crates.io / GitHub downloads occasionally die with GnuTLS recv errors; retry a few times.
+# Do not retry permanent finish/tooling errors (pipewire socket, compose, aws-lc flags).
 attempts=3
+BUILD_LOG="$(mktemp)"
 for attempt in $(seq 1 "$attempts"); do
-  if (
+  set +e
+  (
     cd "$FLATPAK_DIR"
-    flatpak-builder "${BUILDER_ARGS[@]}" "$WORKDIR" "$(basename "$RUNTIME_MANIFEST")"
-  ); then
+    "${FLATPAK_BUILDER[@]}" "${BUILDER_ARGS[@]}" "$WORKDIR" "$(basename "$RUNTIME_MANIFEST")"
+  ) 2>&1 | tee "$BUILD_LOG"
+  status=${PIPESTATUS[0]}
+  set -e
+  if [[ "$status" -eq 0 ]]; then
     break
+  fi
+  if grep -Eiq \
+    'Unknown socket type|execvp appstream-compose|must not be compiled with optimizations' \
+    "$BUILD_LOG"; then
+    echo "flatpak-builder permanent failure (not retrying)" >&2
+    exit 1
   fi
   if [[ "$attempt" -eq "$attempts" ]]; then
     echo "flatpak-builder failed after ${attempts} attempts" >&2

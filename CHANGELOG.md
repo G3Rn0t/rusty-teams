@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.4.0-joe.17] - 2026-11-16
+
+### Fixed
+
+- Flatpak builds through Flathub `org.flatpak.Builder` so Jammy host flatpak
+  1.12 no longer rejects `--socket=pipewire` at export; permanent finish
+  errors are not retried.
+
 ## [0.4.0-joe.16] - 2026-11-16
 
 ### Fixed
