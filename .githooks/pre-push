@@ -1,0 +1,116 @@
+#!/bin/sh
+# pre-push — Fork bleibt auf Forgejo, offene Upstream-PR-Heads überleben den Spiegel.
+# Aufruf: Git übergibt <remote> <url>, auf stdin die Push-Zeilen
+#   <local ref> <local sha> <remote ref> <remote sha>
+# Quelle: .cursor/rules/fork-workflow.mdc. Installation: scripts/install-git-hooks.sh
+set -eu
+
+remote="${1:-}"
+url="${2:-}"
+
+updates=""
+deletes=""
+while read -r local_ref local_sha remote_ref remote_sha; do
+  [ -n "${remote_ref:-}" ] || continue
+  case "$local_sha" in
+    0000000000000000000000000000000000000000)
+      deletes="${deletes}${remote_ref}
+"
+      ;;
+    *)
+      updates="${updates}${remote_ref}
+"
+      ;;
+  esac
+done
+
+has_ref_lines() {
+  [ -n "$updates" ] || [ -n "$deletes" ]
+}
+
+die() {
+  printf '%s\n' "$@" >&2
+  exit 1
+}
+
+case "$url" in
+  *d0dg3r/rusty-teams*)
+    if has_ref_lines; then
+      die \
+        "Stopp: Push auf den GitHub-Fork (d0dg3r/rusty-teams) ist gesperrt." \
+        "Der Fork ist nur der Spiegel von Forgejo. Pushe nach origin (forgejo.lan/devops-geek/rusty-teams)." \
+        "Upstream-PR: Branch auf origin legen. Der Spiegel erzeugt ihn auf GitHub, danach gh pr create gegen danieldaeschle/rusty-teams."
+    fi
+    exit 0
+    ;;
+  *danieldaeschle/rusty-teams*)
+    if has_ref_lines; then
+      die \
+        "Stopp: Direkt-Push auf upstream (danieldaeschle/rusty-teams) ist gesperrt." \
+        "Upstream bekommt nur Pull Requests. Den Head zuerst auf origin pushen."
+    fi
+    exit 0
+    ;;
+esac
+
+# Nur der Forgejo-SoT löscht beim Spiegeln GitHub-Branches. Vor jedem origin-Push
+# müssen offene Upstream-PR-Heads dort liegen.
+check_origin=0
+case "$remote" in
+  origin) check_origin=1 ;;
+esac
+case "$url" in
+  *forgejo.lan*devops-geek/rusty-teams*|*forgejo.lan*rusty-teams*) check_origin=1 ;;
+esac
+[ "$check_origin" -eq 1 ] || exit 0
+
+if [ "${GUARD_FORK_PUSH_PR_HEADS+set}" = set ]; then
+  pr_heads=$GUARD_FORK_PUSH_PR_HEADS
+else
+  if ! command -v gh >/dev/null 2>&1; then
+    die "Stopp: gh fehlt. Offene Upstream-PRs können nicht geprüft werden."
+  fi
+  if ! pr_heads=$(gh pr list --repo danieldaeschle/rusty-teams --state open --limit 100 \
+    --json url,headRefName,headRepositoryOwner \
+    --jq '.[] | select(.headRepositoryOwner.login=="d0dg3r") | "\(.headRefName)\t\(.url)"'); then
+    die "Stopp: gh pr list für danieldaeschle/rusty-teams ist fehlgeschlagen. Push abgebrochen, damit der Spiegel keinen offenen PR-Head löscht."
+  fi
+fi
+
+if [ -z "$pr_heads" ]; then
+  exit 0
+fi
+
+if [ "${GUARD_FORK_PUSH_ORIGIN_HEADS+set}" = set ]; then
+  origin_heads=$GUARD_FORK_PUSH_ORIGIN_HEADS
+else
+  if ! origin_heads=$(git ls-remote --heads origin | awk '{print $2}'); then
+    die "Stopp: git ls-remote origin ist fehlgeschlagen. Push abgebrochen."
+  fi
+fi
+
+# Kein Pipe: `while` in einer Pipe läuft in einer Subshell, und `exit` darin
+# stoppt den Hook nicht (ohne pipefail zählt der Exit von printf).
+while IFS="$(printf '\t')" read -r name pr_url; do
+  [ -n "${name:-}" ] || continue
+  ref="refs/heads/${name}"
+  if printf '%s\n' "$deletes" | grep -Fxq "$ref"; then
+    die \
+      "Stopp: Dieser Push löscht ${ref}." \
+      "Das ist der Head eines offenen Upstream-PRs${pr_url:+ ($pr_url)}." \
+      "Der Forgejo-Spiegel würde den Branch auf GitHub löschen und den PR schliessen." \
+      "Den Branch auf origin stehen lassen, bis der PR gemerged oder bewusst geschlossen ist."
+  fi
+  if printf '%s\n' "$updates" | grep -Fxq "$ref"; then
+    continue
+  fi
+  if printf '%s\n' "$origin_heads" | grep -Fxq "$ref"; then
+    continue
+  fi
+  die \
+    "Stopp: Offener Upstream-PR-Head ${ref} fehlt auf Forgejo${pr_url:+ ($pr_url)}." \
+    "Ein Push auf origin lässt den Spiegel den GitHub-Branch löschen und schliesst den PR." \
+    "Zuerst: git push origin <commit>:${ref}"
+done <<EOF
+$pr_heads
+EOF

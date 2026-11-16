@@ -15,27 +15,31 @@ Dieses Repo ist Joes Produktlinie. Remotes und Rollen:
 
 ## Immer
 
-- Alltagskomits und Feature-Branches nach **`origin`** pushen (`git push -u origin HEAD`), nie nach `upstream` und nicht als SoT nach `github`.
+- Alltagskomits und Feature-Branches nach **`origin`** pushen (`git push -u origin HEAD`).
 - Dauerhafte SoT: Branch `main` (bzw. der aktuelle Integrationsbranch) auf Forgejo.
+- Entwickeln, Branches anlegen, reviewen und mergen passiert auf **Forgejo**. Der GitHub-Fork `d0dg3r/rusty-teams` ist kein Arbeitsort: kein `git push github`, kein Branch im GitHub-Web, kein Commit dort.
+- `gh` gegen `danieldaeschle/rusty-teams` nur für den Upstream-PR (anlegen, Review, Reopen). Der Head kommt vom Spiegel, nicht von einem lokalen Push auf `github`.
 - Upstream mitnehmen: `git fetch upstream`, dann `merge`/`rebase` von `upstream/main` in den lokalen Branch — Konflikte hier lösen.
+- Vor dem ersten Push in einem Klon: `scripts/install-git-hooks.sh`. Danach lehnt `.githooks/pre-push` Pushs auf `github` und `upstream` ab. `--no-verify` ist für diesen Hook nicht erlaubt.
 
 ## PRs an Upstream
 
 - Nur **kleine, thematische Scheiben**, abgezweigt vom aktuellen `upstream/main`.
 - Nicht den ganzen Fork-Stand (Agent-Providers, lokale Experimente, …) als einen PR schicken.
-- PR-Quelle: Branch auf `github` (`d0dg3r/rusty-teams`) → Ziel `danieldaeschle/rusty-teams`.
+- Reihenfolge, ohne Abkürzung:
+  1. Branch auf **Forgejo** pushen (`git push -u origin HEAD` bzw. `git push origin HEAD:pr/…`).
+  2. Warten, bis der Push-Mirror denselben Branch auf `d0dg3r/rusty-teams` angelegt hat.
+  3. PR von diesem gespiegelten Branch nach `danieldaeschle/rusty-teams`.
 
 ### Push-Mirror vs. Upstream-PR-Branches (Gesetz)
 
-Forgejo Push-Mirror nach `d0dg3r/rusty-teams` spiegelt **nur** Refs, die auf Forgejo existieren, und **löscht** auf GitHub Branches, die auf Forgejo fehlen. Folge: ein nur auf GitHub angelegter PR-Head (`pr/…`) verschwindet beim nächsten Forgejo→GitHub-Sync → GitHub schliesst den Upstream-PR mit `head_ref_deleted` (Actor oft `d0dg3r`, nicht Daniel).
+Forgejo Push-Mirror nach `d0dg3r/rusty-teams` spiegelt **nur** Refs, die auf Forgejo existieren, und **löscht** auf GitHub Branches, die auf Forgejo fehlen. Ein nur auf GitHub liegender PR-Head (`pr/…`) verschwindet beim nächsten Forgejo→GitHub-Sync. GitHub schliesst den Upstream-PR mit `head_ref_deleted`. Als Actor steht dann oft `d0dg3r`, nicht Daniel. Das passiert bei jedem Push auf `origin`, auch bei einem Merge auf `main`.
 
-**Pflicht, solange ein Upstream-PR offen ist:**
+**Solange ein Upstream-PR offen ist, liegt sein Head auf Forgejo.** Fehlt er dort, ist der nächste `origin`-Push verboten, bis `git push origin <commit>:refs/heads/pr/…` gelaufen ist. Den Head auf Forgejo löschen, während der PR offen ist, ist ebenfalls verboten.
 
-1. PR-Head parallel auf **Forgejo** halten (`git push origin HEAD:pr/…`), damit der Mirror ihn nicht löscht — **oder**
-2. nach jedem Forgejo-Push den fehlenden Head erneut nach `github` pushen und den PR ggf. `gh pr reopen`
-3. Nie annehmen, `git push github pr/…` allein überlebt den nächsten SoT-Push auf `origin`
+Der Hook prüft das vor jedem Push auf `origin`: jeder offene PR von `d0dg3r` nach `danieldaeschle/rusty-teams` muss auf `origin` existieren oder im selben Push mitkommen. Ein Push, der so einen Head löscht, wird abgelehnt.
 
-Alltags-Feature-Branches für die eigene Linie weiter nur auf `origin`; der Sonderfall gilt ausschliesslich für offene Upstream-PR-Heads auf dem Spiegel-Remote.
+Alltags-Feature-Branches der eigenen Linie liegen nur auf `origin`. Auf den Spiegel-Remote wird für sie nichts gepusht. Der Hook ist die Durchsetzung, die Regel bleibt auch dann gültig, wenn der Hook in einem Checkout fehlt.
 
 ## Eigene Releases
 
@@ -46,8 +50,12 @@ Alltags-Feature-Branches für die eigene Linie weiter nur auf `origin`; der Sond
 
 ## Nicht tun
 
-- Alltagskomits auf `upstream` pushen
-- Alltagskomits nur auf `github` pushen und Forgejo vergessen
-- Upstream-PR-Head nur auf `github` anlegen und danach Forgejo pushen, ohne den Head auch auf `origin` zu haben (Mirror löscht ihn → PR closed)
+- `git push github` oder sonst auf dem Fork `d0dg3r/rusty-teams` arbeiten
+- `git push upstream` (Upstream nur per PR)
+- Upstream-PR-Head nur auf GitHub anlegen
+- `origin` pushen, solange ein offener Upstream-PR-Head auf Forgejo fehlt
+- Offenen Upstream-PR-Head auf Forgejo löschen
+- Den Hook mit `--no-verify` umgehen
+- Nach einem geschlossenen PR den Head nur auf GitHub neu anlegen und `gh pr reopen` — zuerst Forgejo
 - Riesen-PR mit vermischten Fork-Features an Daniel
 - Upstream-Tag-Namen für abweichenden Fork-Inhalt wiederverwenden
