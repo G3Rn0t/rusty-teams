@@ -70,11 +70,17 @@ modules:
     build-options:
       append-path: /usr/lib/sdk/rust-stable/bin:/usr/lib/sdk/llvm21/bin
       append-ld-library-path: /usr/lib/sdk/llvm21/lib
+      # SDK default CFLAGS include -O2; that overrides aws-lc-sys jitterentropy's
+      # required -O0 and breaks the build (#error must not be compiled with opts).
+      cflags: ''
+      cxxflags: ''
       env:
         CARGO_HOME: /run/build/rusty-teams/cargo
         CC: clang
         CXX: clang++
         CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER: clang
+        CFLAGS: ''
+        CXXFLAGS: ''
         # Cap parallel links; clang Bus errors on 16 GiB CI runners otherwise.
         CARGO_BUILD_JOBS: '2'
         # Override .cargo/config.toml mold; llvm21 ships lld.
@@ -88,7 +94,8 @@ modules:
       - bsdtar -xf webrtc-linux-x64-release.zip -C webrtc
       # AppStream <release> is rewritten by build_flatpak.sh on the host (Jammy
       # flatpak-builder 1.2 has no --env for FLATPAK_APP_VERSION).
-      - cargo build -p app --release --frozen --offline -j2
+      # Keep CFLAGS/CXXFLAGS empty so sdk -O2 cannot win over aws-lc -O0.
+      - CFLAGS= CXXFLAGS= cargo build -p app --release --frozen --offline -j2
       - install -Dm755 target/release/teams /app/bin/rusty-teams
       - ln -sf rusty-teams /app/bin/teams
       - install -Dm644 packaging/flatpak/net.devops_geek.RustyTeams.desktop /app/share/applications/net.devops_geek.RustyTeams.desktop

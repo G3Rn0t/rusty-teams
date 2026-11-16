@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0-joe.14] - 2026-11-16
+
+### Fixed
+
+- Flatpak SDK build: clear `CFLAGS`/`CXXFLAGS` so Freedesktop `-O2` does not
+  override `aws-lc-sys` jitterentropy's required `-O0`.
+
 ## [0.4.0-joe.13] - 2026-11-16
 
 ### Fixed
