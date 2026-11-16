@@ -20,6 +20,7 @@
 - [x] 2.9 Clear Flatpak SDK `CFLAGS`/`CXXFLAGS` for the rusty-teams module so `aws-lc-sys` jitterentropy builds with `-O0`; verify the build no longer fails with «must not be compiled with optimizations»
 - [x] 2.10 Set manifest `appstream-compose: false` and validate metainfo with host `appstreamcli`; verify finish no longer fails with `execvp appstream-compose: No such file or directory` on Jammy act runners
 - [x] 2.11 Install `ppa:flatpak/stable` on the Flatpak CI job (flatpak ≥ 1.18) so `--socket=pipewire` is accepted; do not retry permanent finish-args errors; verify export no longer fails with `Unknown socket type pipewire`
+- [x] 2.12 Extract webrtc with `bsdtar --no-same-owner`; verify the build no longer fails with `Can't set user=1001` under PPA bubblewrap
 
 ## 3. Release CI and docs
 

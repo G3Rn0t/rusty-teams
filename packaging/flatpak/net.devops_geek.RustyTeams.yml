@@ -95,7 +95,9 @@ modules:
       # Drop mold from repo config so RUSTFLAGS lld wins cleanly.
       - sed -i '/fuse-ld=mold/d' .cargo/config.toml
       - mkdir -p webrtc
-      - bsdtar -xf webrtc-linux-x64-release.zip -C webrtc
+      # Newer bubblewrap (Flatpak PPA) cannot chown zip members to uid 1001 in the
+      # build user namespace; ignore archive ownership.
+      - bsdtar --no-same-owner -xf webrtc-linux-x64-release.zip -C webrtc
       # AppStream <release> is rewritten by build_flatpak.sh on the host (Jammy
       # flatpak-builder 1.2 has no --env for FLATPAK_APP_VERSION).
       # Keep CFLAGS/CXXFLAGS empty so sdk -O2 cannot win over aws-lc -O0.

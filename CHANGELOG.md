@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0-joe.19] - 2026-11-16
+
+### Fixed
+
+- Flatpak webrtc extract uses `bsdtar --no-same-owner` so PPA bubblewrap no
+  longer fails chowning zip members to uid 1001 in the build namespace.
+
 ## [0.4.0-joe.18] - 2026-11-16
 
 ### Fixed

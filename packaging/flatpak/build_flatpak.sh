@@ -166,7 +166,7 @@ for attempt in $(seq 1 "$attempts"); do
     break
   fi
   if grep -Eiq \
-    'Unknown socket type|execvp appstream-compose|must not be compiled with optimizations' \
+    'Unknown socket type|execvp appstream-compose|must not be compiled with optimizations|bsdtar: Error exit delayed|Can.t set user=' \
     "$BUILD_LOG"; then
     echo "flatpak-builder permanent failure (not retrying)" >&2
     exit 1

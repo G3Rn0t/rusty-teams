@@ -75,6 +75,8 @@ Build constraints that shape the approach: `vendor/webrtc-sys` requires Clang �
 
 **Builder host vs finish-args:** Jammy archive `flatpak` 1.12 rejects `--socket=pipewire`. The Flatpak CI job installs `ppa:flatpak/stable` (flatpak ≥ 1.18, flatpak-builder ≥ 1.4) so Runtime 25.08 finish-args including PipeWire export cleanly. Retries skip permanent finish/tooling errors. Nested `org.flatpak.Builder` was tried and rejected: act/Docker has no D-Bus for `flatpak run`.
 
+**Webrtc zip ownership:** PPA bubblewrap cannot `chown` archive members to uid 1001 inside the build user namespace. Extract with `bsdtar --no-same-owner`.
+
 ## Risks / Trade-offs
 
 - [Clang/runtime mismatch] → Pin SDK + LLVM extension after a smoke `flatpak-builder` and document the exact versions in the manifest comment.
