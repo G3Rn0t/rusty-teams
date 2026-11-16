@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.4.0-joe.15] - 2026-11-16
+
+### Fixed
+
+- Flatpak CI installs `appstream-util` so `appstream-compose` exists when
+  flatpak-builder finishes the build (Jammy previously failed with
+  `execvp appstream-compose: No such file or directory`).
+
 ## [0.4.0-joe.14] - 2026-11-16
 
 ### Fixed

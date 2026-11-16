@@ -13,9 +13,9 @@ source "$ROOT/packaging/common.sh"
 
 cd "$ROOT"
 
-for cmd in flatpak flatpak-builder python3 curl; do
+for cmd in flatpak flatpak-builder python3 curl appstream-compose; do
   if ! command -v "$cmd" >/dev/null 2>&1; then
-    echo "Missing $cmd" >&2
+    echo "Missing $cmd (install appstream-util for appstream-compose)" >&2
     exit 1
   fi
 done

@@ -71,6 +71,8 @@ Build constraints that shape the approach: `vendor/webrtc-sys` requires Clang â‰
 
 **Host strip tools:** The Flatpak CI job installs `elfutils` so `eu-strip` exists when flatpak-builder strips zypak binaries into `/app/lib/debug`.
 
+**Host AppStream compose:** Jammy's `appstream` package is only `appstreamcli`. flatpak-builder finish still needs `appstream-compose` from `appstream-util`; the Flatpak job installs both and `build_flatpak.sh` fails early if the binary is missing.
+
 ## Risks / Trade-offs
 
 - [Clang/runtime mismatch] â†’ Pin SDK + LLVM extension after a smoke `flatpak-builder` and document the exact versions in the manifest comment.
