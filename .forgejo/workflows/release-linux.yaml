@@ -1,5 +1,5 @@
 # Forgejo: Linux — deb, rpm, Arch pkg + Flatpak (parallel jobs, each publishes to the same release).
-# Runner: ubuntu-latest (Homelab Forgejo Actions). Flatpak is built on the runner, not locally.
+# Runner: px03 = ci-runner-linux-03 (16 GiB). Flatpak is built on the runner, not locally.
 
 name: Release (Linux)
 
@@ -14,7 +14,7 @@ concurrency:
 jobs:
   packages:
     if: github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_call' || startsWith(github.ref, 'refs/tags/v')
-    runs-on: ubuntu-latest
+    runs-on: px03
     timeout-minutes: 180
     env:
       CC: clang-21
@@ -92,7 +92,7 @@ jobs:
 
   flatpak:
     if: github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_call' || startsWith(github.ref, 'refs/tags/v')
-    runs-on: ubuntu-latest
+    runs-on: px03
     timeout-minutes: 360
     env:
       CARGO_TERM_COLOR: always
