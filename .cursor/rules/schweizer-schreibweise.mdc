@@ -1,0 +1,33 @@
+---
+description: Deutsche Texte immer in Schweizer Schreibweise und mit Schweizer Konventionen
+alwaysApply: true
+---
+
+# Schweiz als Standard
+
+Dieses Repo gehört zur Schweizer Produktlinie (devops-geek). Alle deutschen Texte — UI, Doku, Commits, Pläne, Chat — folgen Schweizer Konventionen.
+
+| Thema | Vorgabe |
+|---|---|
+| Eszett | nie `ß`, immer `ss` (Strasse, gemäss, ausserhalb, heisst, Grösse) |
+| Anführungszeichen | «…», innen ‹…›; nicht „…“ |
+| Währung | CHF, Format `CHF 1'250.00` bzw. `CHF 1'250.–` |
+| Zahlen | Tausender mit Apostroph `1'000`, Dezimalpunkt `3.5` |
+| Datum / Zeit | `09.10.2026`, `14:00 Uhr`, Zeitzone `Europe/Zurich` |
+| Recht | Schweizer Recht zuerst (DSG, URG, OR); EU/Deutschland (DSGVO, UrhG) nur ergänzend |
+
+## Pflicht
+
+1. Neue deutsche UI-Strings, Doku und Commit-Messages in Schweizer Schreibweise schreiben.
+2. Bestehende deutsche Stellen mit `ß` oder „…“ beim Anfassen angleichen.
+3. OpenSpec unter `openspec/` bleibt Englisch (Rule `openspec-english`).
+
+## Nicht tun
+
+- `ß` in neuen deutschen Texten
+- Deutsche Anführungszeichen „…“ oder ‚…‘
+- OpenSpec-Artefakte auf Deutsch schreiben
+
+## Ausnahmen
+
+Code-Bezeichner, Tastatur-Layout `de` und fremdsprachige Zitate bleiben unverändert.

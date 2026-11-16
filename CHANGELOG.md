@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.4.0-joe.23] - 2026-11-16
+
+### Added
+
+- CalDAV calendar accounts (Nextcloud, Fastmail, iCloud, and generic servers) with
+  app-password auth in the OS keyring, discovery, read/write, series expansion,
+  and RSVP where the server supports scheduling (ADR 0019).
+- Read-only ICS subscriptions on the shared iCalendar parser.
+- Settings split: **Calendar** (view prefs) and **Calendar accounts** (sources,
+  home, write). CalDAV/ICS connect forms stay collapsed until add; long fields
+  use stacked labels so titles stay readable.
+
+### Changed
+
+- Calendar merge prefers Outlook, then the home calendar, then the first source.
+- Dual-write copy is source-neutral when home is not Outlook.
+
 ## [0.4.0-joe.22] - 2026-11-16
 
 ### Fixed

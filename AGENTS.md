@@ -19,6 +19,8 @@ Product behaviour lives under `openspec/` (config: `openspec/config.yaml`). Skil
 
 **Language: English only** for all OpenSpec artifacts (proposal, design, tasks, specs, archives). Rule: `.cursor/rules/openspec-english.mdc` (`alwaysApply`). App UI may still offer German; that is product chrome, not OpenSpec authoring language.
 
+**German product text uses Swiss conventions.** Rule: `.cursor/rules/schweizer-schreibweise.mdc` (`alwaysApply`). UI, docs, commits, and chat use `ss` (never `ß`), guillemets «…», `Europe/Zurich`, and Swiss number/date formats. OpenSpec stays English.
+
 **OpenSpec first (no exceptions).** Rule: `.cursor/rules/openspec-first.mdc` (`alwaysApply`). Every plan for observable behaviour starts with an OpenSpec change under `openspec/changes/` before code, smoke, or Roadmap Done. A Cursor plan does not replace the change. Smoke-only or «already coded» does not skip it. Only pure refactoring, tooling, or docs with no behaviour change may use `skip_specs: true`.
 
 1. Observable behaviour changes → first a change under `openspec/changes/` (`/opsx-propose`).

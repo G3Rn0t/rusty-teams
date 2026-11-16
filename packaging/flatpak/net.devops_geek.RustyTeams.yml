@@ -28,6 +28,7 @@ finish-args:
   # PipeWire is not a flatpak --socket=*; Flathub apps use the runtime path.
   - --filesystem=xdg-run/pipewire-0
   - --talk-name=org.freedesktop.Notifications
+  - --talk-name=org.freedesktop.secrets
   - --talk-name=org.kde.StatusNotifierWatcher
   # SNI bus names are org.kde.StatusNotifierItem-<pid>-<id>; flatpak only
   # allows .* wildcards, so org.kde.* is the valid prefix match.

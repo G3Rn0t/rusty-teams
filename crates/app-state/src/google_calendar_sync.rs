@@ -185,9 +185,8 @@ mod tests {
     #[test]
     fn refresh_failure_message_is_err_not_empty_ok() {
         // Contract for week load: auth refresh problems must be Err so CalendarLoadFailure fires.
-        let err: Result<Vec<CalendarEvent>, String> = Err(
-            "google token refresh failed: HTTP 400: client_secret is missing".into(),
-        );
+        let err: Result<Vec<CalendarEvent>, String> =
+            Err("google token refresh failed: HTTP 400: client_secret is missing".into());
         assert!(err.is_err());
         assert!(err.unwrap_err().contains("token refresh failed"));
         let empty_ok: Result<Vec<CalendarEvent>, String> = Ok(Vec::new());
