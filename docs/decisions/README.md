@@ -32,5 +32,7 @@ Statuses: `proposed`, `accepted`, `superseded`.
 | [0014](0014-linux-installs-and-updates-itself.md) | The Linux binary installs and updates itself |
 | [0015](0015-linux-desktop-toasts-use-freedesktop-notifications.md) | Linux desktop toasts use freedesktop Notifications |
 | [0016](0016-calendar-week-start-and-time-scale-stay-local.md) | Calendar work hours go to the mailbox, week start and time scale stay local |
+| [0017](0017-guest-orgs-switch-by-restart.md) | Guest orgs, one org per window, switch by restart |
+| [0018](0018-macos-desktop-toasts-use-notification-center.md) | macOS desktop toasts use Notification Center |
 
-Records `0001` to `0016` are the decisions already shipped. `0001` follows Daniel's call-window note in `GUARDRAILS.md`.
+Records `0001` to `0018` are the decisions already shipped. `0001` follows Daniel's call-window note in `GUARDRAILS.md`.

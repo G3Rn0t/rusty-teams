@@ -38,7 +38,9 @@ Feature parity with the Microsoft Teams desktop client.
 | Sign in on Linux without starting Chrome by hand | Done | The app starts Chrome or Chromium headless with its own profile, shows the window for the login and hides it again afterwards; a watchdog restarts a dead or hung Chrome |
 | Single instance, second start brings the window to front | Done |  |
 | Sign in on macOS without starting Chrome by hand | Done | Same managed browser as on Linux, profile in Application Support. Takes the first of Chrome, Chromium, Edge, Brave, Helium, Vivaldi; checked live with Helium |
-| macOS Notification Center toasts | Done | Shared desktop-notification policy with Linux (ADR 0017); GPUI cards stay Windows-only |
+| macOS Notification Center toasts | Done | Shared desktop-notification policy with Linux (ADR 0018); GPUI cards stay Windows-only |
+| Sign in with a Firefox browser | Partial | Firefox, Zen, LibreWolf or Floorp over WebDriver BiDi. Settings > General > Teams session browser picks the browser; Automatic takes the default browser when it is supported, else the first installed; own profile `rusty-teams-firefox` (ADR 0003). Checked live with Zen 1.24 on macOS: headless start, login window and back, page scripts and bindings, restart after a crashed app run. A full Teams sign-in and Linux not run yet |
+| Guest orgs (one account, several tenants) | Partial | Account menu lists the orgs, the open one checked; picking another restarts on it with its own cache (ADR 0017). Orgs that are not open stay live: toast per new chat message from others, count of chats with new messages in the menu, click switches and opens the chat. Guest org sync checked live; the background toast not run live yet. Calls stay on the home tenant; Outlook calendar is unavailable for a guest |
 
 ## Chat list
 
@@ -135,7 +137,7 @@ Feature parity with the Microsoft Teams desktop client.
 | Muted chats stay quiet | Done | Toast, sound and taskbar badge only for @mentions |
 | Mute notifications during calls and meetings | Done | Settings > Notifications switch, default off; message toasts and sounds stay away while a call is active, call rings still show |
 | Notifications on Linux | Done | Message and ring sounds; desktop toasts via `org.freedesktop.Notifications` (same actions as the Windows card; shell history and desktop Do not disturb when the daemon supports them) |
-| Notifications on macOS | Done | Notification Center via `notify-rust` (ADR 0017); same policy as Linux; actions best-effort |
+| Notifications on macOS | Done | Notification Center via `notify-rust` (ADR 0018); same policy as Linux; actions best-effort |
 
 ## Search and navigation
 

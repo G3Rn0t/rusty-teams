@@ -44,6 +44,7 @@ pub mod sounds;
 pub mod substrate_search;
 pub mod team_admin;
 pub mod teams_cdn;
+pub mod tenants;
 pub mod thread_activity;
 pub mod transcripts;
 pub mod translate;
@@ -91,7 +92,10 @@ pub use language_settings::{
     LanguageSettings, LanguageSettingsClient, TranslationBehavior, authoring_patch, behavior_patch,
     parse_language_settings, target_patch,
 };
-pub use links::{LinkImage, LinkInfo, MessageLinks, hosted_content_image_url, is_link_image_url};
+pub use links::{
+    LinkImage, LinkInfo, MessageLinks, hosted_content_image_url, is_ams_image_url,
+    is_link_image_url,
+};
 pub use mask::mask_conversation_id;
 pub use members::{
     HistoryShare, INVALID_TOPIC_CHARACTER, MAX_HISTORY_DAYS, MAX_TOPIC_LENGTH, ThreadMembers,
@@ -136,6 +140,7 @@ pub use substrate_search::{
 pub use team_admin::{
     ChannelEdit, ChannelPrivacy, ExistingChannel, Mailbox, NewChannel, TeamAdmin,
 };
+pub use tenants::{Tenant, list_tenants};
 pub use thread_activity::{ThreadActivity, ThreadActivityKind};
 pub use transcripts::{MeetingTranscript, TranscriptError, TranscriptTurn, Transcripts};
 pub use translate::{
