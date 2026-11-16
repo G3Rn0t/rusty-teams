@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0-joe.21] - 2026-11-16
+
+### Fixed
+
+- Flatpak tray permission uses `--own-name=org.kde.*` (flatpak only allows
+  `.*` wildcards; `StatusNotifierItem-*` is rejected at finish).
+
 ## [0.4.0-joe.20] - 2026-11-16
 
 ### Fixed

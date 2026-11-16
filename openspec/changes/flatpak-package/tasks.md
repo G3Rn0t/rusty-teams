@@ -21,6 +21,7 @@
 - [x] 2.10 Set manifest `appstream-compose: false` and validate metainfo with host `appstreamcli`; verify finish no longer fails with `execvp appstream-compose: No such file or directory` on Jammy act runners
 - [x] 2.11 Install `ppa:flatpak/stable` on the Flatpak CI job (flatpak ≥ 1.18); replace invalid `--socket=pipewire` with `--filesystem=xdg-run/pipewire-0`; verify export no longer fails with `Unknown socket type pipewire`
 - [x] 2.12 Extract webrtc with `bsdtar --no-same-owner`; verify the build no longer fails with `Can't set user=1001` under PPA bubblewrap
+- [x] 2.13 Replace invalid `--own-name=org.kde.StatusNotifierItem-*` with `--own-name=org.kde.*`; verify finish no longer fails with `Invalid dbus name`
 
 ## 3. Release CI and docs
 

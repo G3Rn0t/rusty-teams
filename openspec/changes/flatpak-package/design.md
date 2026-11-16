@@ -47,7 +47,7 @@ Build constraints that shape the approach: `vendor/webrtc-sys` requires Clang â‰
 
 ### 4. Finish-args for product defaults
 
-**Choice:** Network, ipc, wayland, fallback-x11, dri, pulseaudio, `xdg-download`, `--filesystem=xdg-run/pipewire-0` (PipeWire is not a `--socket=` type), Notifications talk-name, StatusNotifierWatcher talk-name, StatusNotifierItem own-name wildcard, `--device=all` for V4L2 (documented; Flatpak has no narrower camera permission for `/dev/video*`).
+**Choice:** Network, ipc, wayland, fallback-x11, dri, pulseaudio, `xdg-download`, `--filesystem=xdg-run/pipewire-0` (PipeWire is not a `--socket=` type), Notifications talk-name, StatusNotifierWatcher talk-name, `--own-name=org.kde.*` (SNI bus names use hyphens; flatpak only allows `.*` wildcards), `--device=all` for V4L2 (documented; Flatpak has no narrower camera permission for `/dev/video*`).
 
 **Why:** Matches what the app already does on a normal desktop session so the user does not open Flatseal.
 

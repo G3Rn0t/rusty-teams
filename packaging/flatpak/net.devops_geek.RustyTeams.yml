@@ -28,7 +28,9 @@ finish-args:
   - --filesystem=xdg-run/pipewire-0
   - --talk-name=org.freedesktop.Notifications
   - --talk-name=org.kde.StatusNotifierWatcher
-  - --own-name=org.kde.StatusNotifierItem-*
+  # SNI bus names are org.kde.StatusNotifierItem-<pid>-<id>; flatpak only
+  # allows .* wildcards, so org.kde.* is the valid prefix match.
+  - --own-name=org.kde.*
   - --talk-name=org.freedesktop.Flatpak
 modules:
   - name: zypak

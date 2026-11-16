@@ -1,6 +1,7 @@
 {
   "net.devops_geek.RustyTeams": [
     "finish-args-arbitrary-device-access",
-    "finish-args-flatpak-talk-name"
+    "finish-args-flatpak-talk-name",
+    "finish-args-unnecessary-own-name"
   ]
 }
