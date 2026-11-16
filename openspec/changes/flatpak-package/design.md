@@ -69,6 +69,8 @@ Build constraints that shape the approach: `vendor/webrtc-sys` requires Clang �
 
 **Git file protocol:** Before `flatpak-builder`, set `protocol.file.allow=always` via process-local `GIT_CONFIG_*` so zypak's `nickle` submodule can clone from the builder's local git cache (Git ≥ 2.38 otherwise fails with `transport 'file' not allowed`).
 
+**Host strip tools:** The Flatpak CI job installs `elfutils` so `eu-strip` exists when flatpak-builder strips zypak binaries into `/app/lib/debug`.
+
 ## Risks / Trade-offs
 
 - [Clang/runtime mismatch] → Pin SDK + LLVM extension after a smoke `flatpak-builder` and document the exact versions in the manifest comment.

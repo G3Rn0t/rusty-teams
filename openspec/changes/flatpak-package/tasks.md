@@ -15,6 +15,7 @@
 - [x] 2.4 Add `iproute2` (or equivalent) into `/app` if the Platform lacks `ss`; verify managed Chrome kill path can locate a listener PID inside the sandbox, or confirm `ss` is present and skip the module
 - [x] 2.5 Jammy compatibility: rewrite metainfo on the host and inject Google OAuth via a temporary manifest `build-options.env` (no `flatpak-builder --env`); verify the script invokes builder without `--env=` flags
 - [x] 2.6 Before `flatpak-builder`, set process-local `protocol.file.allow=always` so zypak's `nickle` submodule can clone from the local git cache; verify the build no longer fails with `transport 'file' not allowed`
+- [x] 2.7 Install `elfutils` (`eu-strip`) in the Flatpak CI job so flatpak-builder can strip zypak debuginfo; verify the job no longer fails with `Failed to execute child process "eu-strip"`
 
 ## 3. Release CI and docs
 

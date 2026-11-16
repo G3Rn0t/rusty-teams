@@ -1,5 +1,5 @@
 # Forgejo: Linux — deb, rpm, Arch pkg + Flatpak (parallel jobs, each publishes to the same release).
-# Runner: px03 = ci-runner-linux-03 (16 GiB). Flatpak is built on the runner, not locally.
+# Runner: ubuntu-latest on ci-runner-linux-01..03 (16 GiB each). Flatpak builds on the runner.
 
 name: Release (Linux)
 
@@ -14,7 +14,7 @@ concurrency:
 jobs:
   packages:
     if: github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_call' || startsWith(github.ref, 'refs/tags/v')
-    runs-on: px03
+    runs-on: ubuntu-latest
     timeout-minutes: 180
     env:
       CC: clang-21
@@ -92,7 +92,7 @@ jobs:
 
   flatpak:
     if: github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_call' || startsWith(github.ref, 'refs/tags/v')
-    runs-on: px03
+    runs-on: ubuntu-latest
     timeout-minutes: 360
     env:
       CARGO_TERM_COLOR: always
@@ -107,6 +107,7 @@ jobs:
           sudo apt-get update -y
           sudo apt-get install --no-install-recommends -y \
             flatpak flatpak-builder appstream desktop-file-utils \
+            elfutils \
             python3 python3-pip python3-venv \
             curl ca-certificates jq
           # Jammy apt tomlkit is too old for flatpak-cargo-generator (.unwrap).
@@ -114,6 +115,7 @@ jobs:
             'aiohttp>=3.9.5,<4' 'tomlkit>=0.13.3,<1' 'PyYAML>=6.0.2,<7'
           # When flatpak-builder-lint is available it must pass (build_flatpak.sh).
           sudo apt-get install --no-install-recommends -y flatpak-builder-lint || true
+          command -v eu-strip >/dev/null
 
       - name: Require Google client on v* tags
         if: startsWith(github.ref, 'refs/tags/v')

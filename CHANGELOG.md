@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.4.0-joe.11] - 2026-11-16
+
+### Fixed
+
+- Flatpak CI installs `elfutils` (`eu-strip`) so flatpak-builder can strip zypak
+  debuginfo after the module build.
+- Linux Test/Release use `ubuntu-latest` again so any of `ci-runner-linux-01..03`
+  (all 16 GiB) can take the job.
+
 ## [0.4.0-joe.10] - 2026-11-16
 
 ### Fixed
@@ -8,8 +17,8 @@
   the flatpak-builder local cache (Git ≥ 2.38).
 - CI blur mask-age unit test: lengthen the slow segmenter delay so fast macOS
   runners no longer flake with «mask came back before the model was done».
-- Linux Test and Release (packages/Flatpak) run on `px03` (`ci-runner-linux-03`,
-  16 GiB) instead of the 8 GiB `ubuntu-latest` pool.
+- Linux Test and Release (packages/Flatpak) temporarily pinned to `px03`
+  (16 GiB) while other runners were still at 8 GiB.
 
 ## [0.4.0-joe.9] - 2026-11-16
 

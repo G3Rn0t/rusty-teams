@@ -33,8 +33,8 @@ jobs:
   linux:
     name: Linux
     needs: [openspec-gate]
-    # ci-runner-linux-03 (16 GiB); ubuntu-latest also matches the 8 GiB -01 box.
-    runs-on: px03
+    # ci-runner-linux-01..03 (16 GiB each) all advertise ubuntu-latest.
+    runs-on: ubuntu-latest
     timeout-minutes: 90
     env:
       CC: clang-21
