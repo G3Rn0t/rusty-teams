@@ -81,8 +81,16 @@ Accept, tentatively accept, and decline for a CalDAV-owned invitation MUST updat
 #### Scenario: Delete one occurrence of a CalDAV series
 
 - **WHEN** the user deletes a single occurrence of a CalDAV series
-- **THEN** that occurrence no longer appears in the grid after refresh
+- **THEN** the app excludes that occurrence with EXDATE on the series master
+- **AND** the app does not DELETE the series resource href
+- **AND** that occurrence no longer appears in the grid after refresh
 - **AND** other occurrences of the series remain
+
+#### Scenario: Series occurrences keep distinct object ids
+
+- **WHEN** a CalDAV or ICS series expands into more than one occurrence in the visible window
+- **THEN** each occurrence has a distinct `object_id` that includes the occurrence start
+- **AND** peek, selection, reminders, and retained peek details address one occurrence at a time
 
 ### Requirement: CalDAV reminders stay local
 
@@ -111,6 +119,40 @@ When CalDAV is connected and the week or month load cannot authenticate or compl
 - **WHEN** CalDAV returns unauthorized during week load and Outlook events loaded successfully
 - **THEN** the grid still shows the Outlook events
 - **AND** a CalDAV load failure is shown with retry
+
+#### Scenario: One CalDAV calendar fails while another succeeds
+
+- **WHEN** one selected CalDAV calendar fails during week load and another selected CalDAV calendar succeeds
+- **THEN** the grid still shows events from the successful CalDAV calendar
+- **AND** a CalDAV load failure names the failed calendar
+
+#### Scenario: CalDAV or ICS request times out
+
+- **WHEN** a CalDAV or ICS host does not answer within the request timeout
+- **THEN** that source fails with a load failure
+- **AND** other calendar sources that already loaded keep their events
+
+### Requirement: ICS read-only subscriptions
+
+The app SHALL let the user add a read-only ICS subscription by URL and optional display name. Subscribed events MUST appear in the merged grid and MUST NOT offer create, edit, RSVP, or delete. `webcal://` and `webcals://` URLs MUST be stored and fetched as `https://`.
+
+#### Scenario: Add ICS subscription
+
+- **WHEN** the user enters an ICS URL and chooses to subscribe
+- **THEN** the subscription appears among calendar accounts
+- **AND** its events appear in the week or month grid after refresh as read-only
+
+#### Scenario: webcal URL normalised
+
+- **WHEN** the user pastes a `webcal://` or `webcals://` subscription link
+- **THEN** the app stores and fetches it as `https://`
+- **AND** events load when the HTTPS feed succeeds
+
+#### Scenario: One ICS subscription fails while another succeeds
+
+- **WHEN** one selected ICS subscription fails during week load and another selected ICS subscription succeeds
+- **THEN** the grid still shows events from the successful subscription
+- **AND** an ICS load failure names the failed subscription
 
 ## MODIFIED Requirements
 

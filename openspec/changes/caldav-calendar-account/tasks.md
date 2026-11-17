@@ -31,3 +31,14 @@
 - [x] 5.1 Unit tests: parser folding, exclusive all-day, multi-VEVENT, expansion (EXDATE, override, DST Europe/Zurich, series older than window), Windows TZ, merge preference, `needs_join_first` CalDAV-only
 - [x] 5.2 HTTP fixtures for PROPFIND/REPORT; optional Radicale smoke when available
 - [x] 5.3 `cargo test -p chatsvc -p store -p app-state --lib`
+
+## 6. Upstream review hardening (PR 56)
+
+- [x] 6.1 Enable keyring features `apple-native`, `windows-native`, `async-secret-service`, `tokio`, `crypto-rust`; use `spawn_blocking` for keyring I/O; confirm Cargo.lock pulls Secret Service / zbus
+- [x] 6.2 Unique occurrence `object_id` for CalDAV and ICS; keep `series` true after expansion
+- [x] 6.3 Occurrence delete via EXDATE on master (GET + PUT); single events still DELETE; unit test EXDATE rewrite
+- [x] 6.4 Request timeout on CalDAV and ICS clients; fail fast instead of `Client::new()` fallback that drops HTTPS downgrade protection
+- [x] 6.5 Collect per-calendar / per-subscription fetch errors; keep sibling events; adjust `keep_failed_sources`
+- [x] 6.6 Map `webcal://` / `webcals://` to `https://` for ICS connect and fetch
+- [x] 6.7 Rebase PR head on upstream/main; renumber CalDAV ADR to 0019; drop tautological Google refresh test; `cargo fmt`
+- [x] 6.8 Verify: `cargo test -p chatsvc -p store -p app-state -p app-call-model --lib`; optional Nextcloud/Radicale connect + create + delete-occurrence smoke
